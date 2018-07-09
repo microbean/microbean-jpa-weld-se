@@ -40,6 +40,7 @@ final class TransactionalInterceptorRequiresNew extends TransactionalInterceptor
   }
 
   @AroundInvoke
+  @Override
   public final Object intercept(final InvocationContext invocationContext) throws Exception {
     return super.intercept(invocationContext);
   }

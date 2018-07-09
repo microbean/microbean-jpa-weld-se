@@ -45,6 +45,7 @@ final class TransactionalInterceptorNever extends TransactionalInterceptorBase {
   }
 
   @AroundInvoke
+  @Override
   public final Object intercept(final InvocationContext invocationContext) throws Exception {
     return super.intercept(invocationContext);
   }
