@@ -18,6 +18,8 @@ package org.microbean.jpa;
 
 import javax.annotation.Priority;
 
+import javax.inject.Inject;
+
 import javax.interceptor.AroundInvoke;
 import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
@@ -33,8 +35,8 @@ final class TransactionalInterceptorRequiresNew extends TransactionalInterceptor
 
   private static final long serialVersionUID = 1L;
 
-  TransactionalInterceptorRequiresNew() {
-    super(false);
+  TransactionalInterceptorRequiresNew(final TransactionManager transactionManager) {
+    super(transactionManager, false);
   }
 
   @AroundInvoke

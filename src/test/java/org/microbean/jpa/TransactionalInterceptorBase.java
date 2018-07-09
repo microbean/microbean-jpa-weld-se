@@ -16,19 +16,25 @@
  */
 package org.microbean.jpa;
 
+import java.util.Objects;
+
 import javax.transaction.TransactionManager;
 
 abstract class TransactionalInterceptorBase extends com.arjuna.ats.jta.cdi.transactional.TransactionalInterceptorBase {
 
   private static final long serialVersionUID = 1L;
 
-  protected TransactionalInterceptorBase(boolean userTransactionAvailable) {
+  private final TransactionManager transactionManager;
+
+  protected TransactionalInterceptorBase(final TransactionManager transactionManager,
+                                         final boolean userTransactionAvailable) {
     super(userTransactionAvailable);
+    this.transactionManager = Objects.requireNonNull(transactionManager);
   }
 
   @Override
-  protected TransactionManager getTransactionManager() {
-    return com.arjuna.ats.jta.TransactionManager.transactionManager();
+  protected final TransactionManager getTransactionManager() {
+    return this.transactionManager;
   }
   
 }

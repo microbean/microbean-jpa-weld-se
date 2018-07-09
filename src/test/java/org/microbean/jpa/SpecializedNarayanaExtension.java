@@ -20,9 +20,14 @@ import java.lang.reflect.Type;
 
 import javax.enterprise.event.Observes;
 
+import javax.enterprise.inject.spi.AfterBeanDiscovery;
 import javax.enterprise.inject.spi.Annotated;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.ProcessAnnotatedType;
+
+import javax.inject.Singleton;
+
+import javax.transaction.TransactionManager;
 
 public final class SpecializedNarayanaExtension implements Extension {
 
@@ -30,6 +35,13 @@ public final class SpecializedNarayanaExtension implements Extension {
     super();
   }
 
+  private final void afterBeanDiscovery(@Observes final AfterBeanDiscovery event) {
+    event.addBean()
+      .types(TransactionManager.class)
+      .scope(Singleton.class)
+      .createWith(cc -> com.arjuna.ats.jta.TransactionManager.transactionManager());
+  }
+  
   private final void onTypeDiscovery(@Observes final ProcessAnnotatedType<? extends com.arjuna.ats.jta.cdi.transactional.TransactionalInterceptorBase> event) {
     if (event != null) {
       final Annotated annotated = event.getAnnotatedType();
