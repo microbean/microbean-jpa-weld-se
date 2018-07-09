@@ -16,10 +16,8 @@
  */
 package org.microbean.jpa;
 
-// import com.arjuna.ats.jta.UserTransaction;
-
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.transaction.RollbackException;
 import javax.transaction.Status;
@@ -52,7 +50,8 @@ public class NarayanaTransactionServices implements TransactionServices {
       boolean temp = false;
       try {
         final int status = userTransaction.getStatus();
-        temp = status == Status.STATUS_ACTIVE ||
+        temp =
+          status == Status.STATUS_ACTIVE ||
           status == Status.STATUS_COMMITTING ||
           status == Status.STATUS_MARKED_ROLLBACK ||
           status == Status.STATUS_PREPARED ||

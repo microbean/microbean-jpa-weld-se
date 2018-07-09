@@ -73,7 +73,7 @@
       <dependency>
         <groupId>javax.transaction</groupId>
         <artifactId>javax.transaction-api</artifactId>
-        <version>1.3</version>
+        <version>1.2</version>
         <type>jar</type>
       </dependency>
 
@@ -90,10 +90,17 @@
         <version>7.6.0.Final</version>
         <type>jar</type>
       </dependency>
+
+      <dependency>
+        <groupId>org.jboss.narayana.jta</groupId>
+        <artifactId>cdi</artifactId>
+        <version>5.9.0.Final</version>
+        <type>jar</type>
+      </dependency>
       
       <dependency>
         <groupId>org.jboss.narayana.jta</groupId>
-        <artifactId>jta</artifactId>
+        <artifactId>narayana-jta</artifactId>
         <version>5.9.0.Final</version>
         <type>jar</type>
       </dependency>
@@ -128,6 +135,20 @@
     </dependency>
 
     <dependency>
+      <groupId>org.jboss.weld.module</groupId>
+      <artifactId>weld-jta</artifactId>
+      <type>jar</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.microbean</groupId>
+      <artifactId>microbean-weld-se-environment</artifactId>
+      <type>pom</type>
+      <scope>test</scope>
+    </dependency>
+    
+    <dependency>
       <groupId>org.jboss</groupId>
       <artifactId>jboss-transaction-spi</artifactId>
       <type>jar</type>
@@ -136,23 +157,8 @@
     
     <dependency>
       <groupId>org.jboss.narayana.jta</groupId>
-      <artifactId>jta</artifactId>
-      <version>5.9.0.Final</version>
+      <artifactId>narayana-jta</artifactId>
       <type>jar</type>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.jboss.weld.module</groupId>
-      <artifactId>weld-jta</artifactId>
-      <type>jar</type>
-      <scope>test</scope>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.microbean</groupId>
-      <artifactId>microbean-weld-se-environment</artifactId>
-      <type>pom</type>
       <scope>test</scope>
     </dependency>
 
