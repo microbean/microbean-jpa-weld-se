@@ -16,12 +16,19 @@
  */
 package org.microbean.jpa;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+
+import java.util.Set;
 
 import javax.enterprise.event.Observes;
 
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
 import javax.enterprise.inject.spi.Annotated;
+import javax.enterprise.inject.spi.AnnotatedField;
+import javax.enterprise.inject.spi.AnnotatedType;
+import javax.enterprise.inject.spi.BeforeBeanDiscovery;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.ProcessAnnotatedType;
 
@@ -29,19 +36,32 @@ import javax.inject.Singleton;
 
 import javax.transaction.TransactionManager;
 
+import com.arjuna.ats.jta.cdi.TransactionContext;
+
 public final class SpecializedNarayanaExtension implements Extension {
 
   public SpecializedNarayanaExtension() {
     super();
   }
 
+  private final void beforeBeanDiscovery(@Observes final BeforeBeanDiscovery event) throws ReflectiveOperationException {
+    final Field field = TransactionContext.class.getDeclaredField("transactionManager");
+    assert field != null;
+    final int modifiers = field.getModifiers();
+    assert Modifier.isStatic(modifiers);
+    assert Modifier.isPrivate(modifiers);
+    assert TransactionManager.class.equals(field.getType());
+    field.setAccessible(true);
+    field.set(null, com.arjuna.ats.jta.TransactionManager.transactionManager());
+  }
+  
   private final void afterBeanDiscovery(@Observes final AfterBeanDiscovery event) {
     event.addBean()
       .types(TransactionManager.class)
       .scope(Singleton.class)
       .createWith(cc -> com.arjuna.ats.jta.TransactionManager.transactionManager());
   }
-  
+
   private final void onTypeDiscovery(@Observes final ProcessAnnotatedType<? extends com.arjuna.ats.jta.cdi.transactional.TransactionalInterceptorBase> event) {
     if (event != null) {
       final Annotated annotated = event.getAnnotatedType();
