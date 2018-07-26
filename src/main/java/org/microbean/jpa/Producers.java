@@ -22,11 +22,19 @@ import java.util.Objects;
 
 import javax.enterprise.context.ApplicationScoped;
 
+import javax.enterprise.inject.Disposes;
 import javax.enterprise.inject.Produces;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 
 import javax.persistence.spi.PersistenceProvider;
 import javax.persistence.spi.PersistenceProviderResolver;
 import javax.persistence.spi.PersistenceProviderResolverHolder;
+
+import javax.transaction.TransactionScoped;
+
+import org.microbean.jpa.annotation.JTA;
 
 @ApplicationScoped
 final class Producers {
@@ -53,6 +61,17 @@ final class Producers {
     return Objects.requireNonNull(providers).iterator().next();
   }
   
+  @Produces
+  @JTA
+  @TransactionScoped
+  private static final EntityManager produceJTATransactionScopedEntityManager(final EntityManagerFactory entityManagerFactory) {
+    return Objects.requireNonNull(entityManagerFactory).createEntityManager(); // TODO: validation factory Map properties etc.
+  }
 
+  private static final void disposeJTATransactionScopedEntityManager(@Disposes @JTA final EntityManager entityManager) {
+    if (entityManager != null && entityManager.isOpen()) {
+      entityManager.close();
+    }
+  }
   
 }

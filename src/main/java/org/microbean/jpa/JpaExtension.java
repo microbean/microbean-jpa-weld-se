@@ -56,6 +56,10 @@ import javax.persistence.Persistence;
 import javax.persistence.spi.PersistenceProvider;
 import javax.persistence.spi.PersistenceUnitInfo;
 
+import javax.transaction.TransactionScoped;
+
+import org.microbean.jpa.annotation.JTA;
+
 public class JpaExtension implements Extension {
 
   private static final Type persistenceUnitInfoInstanceType = new TypeLiteral<Instance<PersistenceUnitInfo>>() {
@@ -179,7 +183,6 @@ public class JpaExtension implements Extension {
 
               final Set<Bean<?>> beans = beanManager.getBeans(PersistenceUnitInfo.class, namedLiteral);
               assert beans != null;
-              
               final PersistenceUnitInfo persistenceUnitInfo;
               if (!beans.isEmpty()) {
                 bean = beanManager.resolve(beans);
@@ -203,11 +206,12 @@ public class JpaExtension implements Extension {
                 emf.close();
               }
             });
-        
+
+        // Add a bean that creates named EntityManagers in transaction scope.
         event.<EntityManager>addBean()
           .types(Collections.singleton(EntityManager.class))
-          .scope(Dependent.class) // TODO: this is tough
-          .addQualifiers(namedLiteral)
+          .scope(TransactionScoped.class)
+          .addQualifiers(namedLiteral, JTA.Literal.INSTANCE)
           .createWith(cc -> {
               final Bean<?> bean = beanManager.resolve(beanManager.getBeans(EntityManagerFactory.class, namedLiteral));
               assert bean != null;
@@ -217,6 +221,41 @@ public class JpaExtension implements Extension {
             })
           .destroyWith((em, instance) -> {
               if (em.isOpen()) {
+                em.close();
+              }
+            });
+
+        // Add a bean that checks to see if there is already a
+        // transaction-scoped EntityManager.  If there is, return it
+        // in Dependent scope.  If there isn't, just create a new one.
+        event.<EntityManager>addBean()
+          .types(Collections.singleton(EntityManager.class))
+          .scope(Dependent.class)
+          .addQualifiers(namedLiteral)
+          .createWith(cc -> {
+              
+              final Set<Bean<?>> beans = beanManager.getBeans(EntityManager.class, namedLiteral, JTA.Literal.INSTANCE);
+              if (beans == null || beans.isEmpty()) {
+                // No transaction active.
+                final Bean<?> emfBean = beanManager.resolve(beanManager.getBeans(EntityManagerFactory.class, namedLiteral));
+                assert emfBean != null;
+                final EntityManagerFactory emf = (EntityManagerFactory)beanManager.getReference(emfBean, EntityManagerFactory.class, beanManager.createCreationalContext(emfBean));
+                assert emf != null;
+                return emf.createEntityManager();
+              } else {
+                final Bean<?> emBean = beanManager.resolve(beans);
+                assert emBean != null;
+                return (EntityManager)beanManager.getReference(emBean, EntityManager.class, beanManager.createCreationalContext(emBean));
+              }
+            })
+          .destroyWith((em, instance) -> {
+              if (em.isOpen() && !em.isJoinedToTransaction()) {
+                // We close a Dependent-scoped EntityManager only if
+                // we know that when we created it no JTA transaction
+                // was in effect.  Otherwise this EntityManager is a
+                // transaction-scoped EntityManager and we shouldn't
+                // destroy it; the transaction going out of scope
+                // should do that automatically.
                 em.close();
               }
             });

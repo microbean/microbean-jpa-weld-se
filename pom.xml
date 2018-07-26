@@ -111,6 +111,13 @@
         <version>0.1.3</version>
         <type>jar</type>
       </dependency>
+
+      <dependency>
+        <groupId>org.microbean</groupId>
+        <artifactId>microbean-jndi</artifactId>
+        <version>0.0.1</version>
+        <type>jar</type>
+      </dependency>
       
       <dependency>
         <groupId>org.slf4j</groupId>
