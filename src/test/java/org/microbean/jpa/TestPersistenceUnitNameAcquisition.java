@@ -16,23 +16,23 @@
  */
 package org.microbean.jpa;
 
-import javax.annotation.Resource;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.context.Initialized;
 
 import javax.enterprise.event.Observes;
 
+import javax.enterprise.inject.Default;
 import javax.enterprise.inject.Produces;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 
 import javax.persistence.spi.PersistenceUnitInfo;
 
-import javax.transaction.Transaction;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import javax.transaction.UserTransaction;
@@ -59,6 +59,11 @@ public class TestPersistenceUnitNameAcquisition {
 
   @Inject
   private TestPersistenceUnitNameAcquisition self;
+
+  @Inject
+  @Default
+  @Named("test")
+  private EntityManager testEm;
   
   public TestPersistenceUnitNameAcquisition() {
     super();

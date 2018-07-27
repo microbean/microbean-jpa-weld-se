@@ -60,18 +60,5 @@ final class Producers {
   private static final PersistenceProvider getPersistenceProvider(final Collection<? extends PersistenceProvider> providers) {
     return Objects.requireNonNull(providers).iterator().next();
   }
-  
-  @Produces
-  @JTA
-  @TransactionScoped
-  private static final EntityManager produceJTATransactionScopedEntityManager(final EntityManagerFactory entityManagerFactory) {
-    return Objects.requireNonNull(entityManagerFactory).createEntityManager(); // TODO: validation factory Map properties etc.
-  }
 
-  private static final void disposeJTATransactionScopedEntityManager(@Disposes @JTA final EntityManager entityManager) {
-    if (entityManager != null && entityManager.isOpen()) {
-      entityManager.close();
-    }
-  }
-  
 }
