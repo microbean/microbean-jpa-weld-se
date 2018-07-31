@@ -22,19 +22,11 @@ import java.util.Objects;
 
 import javax.enterprise.context.ApplicationScoped;
 
-import javax.enterprise.inject.Disposes;
 import javax.enterprise.inject.Produces;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
 
 import javax.persistence.spi.PersistenceProvider;
 import javax.persistence.spi.PersistenceProviderResolver;
 import javax.persistence.spi.PersistenceProviderResolverHolder;
-
-import javax.transaction.TransactionScoped;
-
-import org.microbean.jpa.annotation.JTA;
 
 @ApplicationScoped
 final class Producers {
@@ -57,7 +49,7 @@ final class Producers {
   
   @Produces
   @ApplicationScoped
-  private static final PersistenceProvider getPersistenceProvider(final Collection<? extends PersistenceProvider> providers) {
+  private static final PersistenceProvider producePersistenceProvider(final Collection<? extends PersistenceProvider> providers) {
     return Objects.requireNonNull(providers).iterator().next();
   }
 

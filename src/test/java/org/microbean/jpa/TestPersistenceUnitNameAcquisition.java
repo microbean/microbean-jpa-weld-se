@@ -27,6 +27,7 @@ import javax.enterprise.inject.Produces;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -63,17 +64,19 @@ public class TestPersistenceUnitNameAcquisition {
   @Inject
   @Default
   @Named("test")
-  private EntityManager testEm;
+  private Provider<EntityManager> testEm;
   
   public TestPersistenceUnitNameAcquisition() {
     super();
   }
 
+  /*
   @Produces
   @Named("test")
   private static final PersistenceUnitInfo producePersistenceUnitInfo() {
     return null; // TODO fixme
   }
+  */
 
   
 
@@ -87,6 +90,7 @@ public class TestPersistenceUnitNameAcquisition {
   @Transactional(TxType.REQUIRED)
   public void frobnicate() {
     System.out.println("*** frobnicating");
+    final EntityManager em = this.testEm.get();
   }
 
   @Test

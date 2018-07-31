@@ -16,6 +16,7 @@
  */
 package org.microbean.jpa;
 
+import java.net.MalformedURLException;
 import java.net.URL;
 
 import java.util.ArrayList;
@@ -24,6 +25,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
+
+import java.util.function.Function;
 
 import javax.persistence.SharedCacheMode;
 import javax.persistence.ValidationMode;
@@ -34,47 +37,56 @@ import javax.persistence.spi.PersistenceUnitTransactionType;
 
 import javax.sql.DataSource;
 
+import org.microbean.jpa.jaxb.Persistence;
+import org.microbean.jpa.jaxb.PersistenceUnitCachingType;
+import org.microbean.jpa.jaxb.PersistenceUnitValidationModeType;
+import org.microbean.jpa.jaxb.Persistence.PersistenceUnit;
+
 public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
 
-  private final ClassLoader classLoader;
+  private ClassLoader classLoader;
 
-  private final boolean excludeUnlistedClasses;
+  private boolean excludeUnlistedClasses;
   
-  private final List<URL> jarFileUrls;
+  private List<URL> jarFileUrls;
 
-  private final DataSource jtaDataSource;
+  private Function<? super String, DataSource> jtaDataSourceProvider;
   
-  private final List<String> managedClassNames;
+  private List<String> managedClassNames;
 
-  private final List<String> mappingFileNames;
-  
-  private final DataSource nonJtaDataSource;
-  
-  private final String persistenceProviderClassName;
-  
-  private final String persistenceUnitName;
-  
-  private final URL persistenceUnitRootUrl;
-  
-  private final String persistenceXMLSchemaVersion;
+  private List<String> mappingFileNames;
 
-  private final Properties properties;
-
-  private final SharedCacheMode sharedCacheMode;
-
-  private final ClassLoader tempClassLoader;
-
-  private final PersistenceUnitTransactionType transactionType;
+  private Function<? super String, DataSource> nonJtaDataSourceProvider;
   
-  private final ValidationMode validationMode;
+  private String persistenceProviderClassName;
+
+  private String persistenceUnitName;
+  
+  private URL persistenceUnitRootUrl;
+  
+  private String persistenceXMLSchemaVersion;
+
+  private Properties properties;
+
+  private SharedCacheMode sharedCacheMode;
+
+  private ClassLoader tempClassLoader;
+
+  private PersistenceUnitTransactionType transactionType;
+  
+  private ValidationMode validationMode;
+
+  PersistenceUnitInfoBean() {
+    super();
+  }
 
   public PersistenceUnitInfoBean(final ClassLoader classLoader,
                                  final boolean excludeUnlistedClasses,
                                  final Collection<? extends URL> jarFileUrls,
-                                 final DataSource jtaDataSource,
+                                 final Function<? super String, DataSource> jtaDataSourceProvider,
                                  final Collection<? extends String> managedClassNames,
                                  final Collection<? extends String> mappingFileNames,
-                                 final DataSource nonJtaDataSource,
+                                 final Function<? super String, DataSource> nonJtaDataSourceProvider,
                                  final String persistenceProviderClassName,
                                  final String persistenceUnitName,
                                  final URL persistenceUnitRootUrl,
@@ -92,7 +104,11 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
     } else {
       this.jarFileUrls = Collections.unmodifiableList(new ArrayList<>(jarFileUrls));
     }
-    this.jtaDataSource = jtaDataSource;
+    if (jtaDataSourceProvider == null) {
+      this.jtaDataSourceProvider = name -> null;
+    } else {
+      this.jtaDataSourceProvider = jtaDataSourceProvider;
+    }
     if (managedClassNames == null || managedClassNames.isEmpty()) {
       this.managedClassNames = Collections.emptyList();
     } else {
@@ -103,7 +119,11 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
     } else {
       this.mappingFileNames = Collections.unmodifiableList(new ArrayList<>(mappingFileNames));
     }
-    this.nonJtaDataSource = nonJtaDataSource;
+    if (nonJtaDataSourceProvider == null) {
+      this.nonJtaDataSourceProvider = name -> null;
+    } else {
+      this.nonJtaDataSourceProvider = nonJtaDataSourceProvider;
+    }
     this.persistenceProviderClassName = persistenceProviderClassName;
     this.persistenceUnitName = persistenceUnitName;
     this.persistenceUnitRootUrl = persistenceUnitRootUrl;
@@ -233,17 +253,124 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
 
   @Override
   public DataSource getJtaDataSource() {
-    return this.jtaDataSource;
+    return this.jtaDataSourceProvider.apply(this.getPersistenceUnitName());
   }
 
   @Override
   public DataSource getNonJtaDataSource() {
-    return this.nonJtaDataSource;
+    return this.nonJtaDataSourceProvider.apply(this.getPersistenceUnitName());
   }
 
   @Override
   public List<String> getMappingFileNames() {
     return this.mappingFileNames;
+  }
+
+  static final Collection<? extends PersistenceUnitInfoBean> fromPersistence(final Persistence persistence,
+                                                                             final URL rootUrl,
+                                                                             final Function<? super String, DataSource> jtaDataSourceProvider,
+                                                                             final Function<? super String, DataSource> nonJtaDataSourceProvider)
+    throws MalformedURLException {
+    Objects.requireNonNull(persistence);
+    Objects.requireNonNull(rootUrl);
+    final Collection<PersistenceUnitInfoBean> returnValue;
+    if (persistence == null) {
+      returnValue = Collections.emptySet();
+    } else {
+      final Collection<? extends PersistenceUnit> persistenceUnits = persistence.getPersistenceUnit();
+      if (persistenceUnits == null || persistenceUnits.isEmpty()) {
+        returnValue = Collections.emptySet();
+      } else {
+        returnValue = new ArrayList<>();
+        for (final PersistenceUnit persistenceUnit : persistenceUnits) {
+          assert persistenceUnit != null;
+          returnValue.add(fromPersistenceUnit(persistenceUnit,
+                                              rootUrl,
+                                              jtaDataSourceProvider,
+                                              nonJtaDataSourceProvider));
+        }
+      }
+    }
+    return returnValue;
+  }
+  
+  static final PersistenceUnitInfoBean fromPersistenceUnit(final PersistenceUnit persistenceUnit,
+                                                           final URL rootUrl,
+                                                           final Function<? super String, DataSource> jtaDataSourceProvider,
+                                                           final Function<? super String, DataSource> nonJtaDataSourceProvider)
+    throws MalformedURLException {
+    Objects.requireNonNull(persistenceUnit);
+    Objects.requireNonNull(rootUrl);
+    PersistenceUnitInfoBean returnValue = null;
+    if (persistenceUnit != null) {
+      final Collection<? extends String> jarFiles = persistenceUnit.getJarFile();
+      final List<URL> jarFileUrls = new ArrayList<>();
+      for (final String jarFile : jarFiles) {
+        if (jarFile != null) {
+          // TODO: probably won't work if rootUrl is, say, a jar URL
+          jarFileUrls.add(new URL(rootUrl, jarFile));
+        }        
+      }
+      
+      final Collection<? extends String> classes = persistenceUnit.getClazz();
+      final Collection<? extends String> mappingFiles = persistenceUnit.getMappingFile();
+      final Properties properties = new Properties();
+      final PersistenceUnit.Properties persistenceUnitProperties = persistenceUnit.getProperties();
+      if (persistenceUnitProperties != null) {
+        final Collection<? extends PersistenceUnit.Properties.Property> propertyInstances = persistenceUnitProperties.getProperty();
+        if (propertyInstances != null && !propertyInstances.isEmpty()) {
+          for (final PersistenceUnit.Properties.Property property : propertyInstances) {
+            assert property != null;
+            properties.setProperty(property.getName(), property.getValue());
+          }
+        }
+      }
+      final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+      final Boolean excludeUnlistedClasses = persistenceUnit.isExcludeUnlistedClasses();
+
+      final SharedCacheMode sharedCacheMode;
+      final PersistenceUnitCachingType persistenceUnitCachingType = persistenceUnit.getSharedCacheMode();
+      if (persistenceUnitCachingType == null) {
+        sharedCacheMode = SharedCacheMode.UNSPECIFIED;
+      } else {
+        sharedCacheMode = SharedCacheMode.valueOf(persistenceUnitCachingType.name());
+      }
+
+      final PersistenceUnitTransactionType transactionType;
+      final org.microbean.jpa.jaxb.PersistenceUnitTransactionType persistenceUnitTransactionType = persistenceUnit.getTransactionType();
+      if (persistenceUnitTransactionType == null) {
+        transactionType = PersistenceUnitTransactionType.JTA; // I guess
+      } else {
+        transactionType = PersistenceUnitTransactionType.valueOf(persistenceUnitTransactionType.name());
+      }
+
+      final ValidationMode validationMode;
+      final PersistenceUnitValidationModeType validationModeType = persistenceUnit.getValidationMode();
+      if (validationModeType == null) {
+        validationMode = ValidationMode.AUTO;
+      } else {
+        validationMode = ValidationMode.valueOf(validationModeType.name());
+      }
+      
+      returnValue = new PersistenceUnitInfoBean(classLoader,
+                                                excludeUnlistedClasses == null ? false : excludeUnlistedClasses,
+                                                jarFileUrls,
+                                                jtaDataSourceProvider,
+                                                classes,
+                                                mappingFiles,
+                                                nonJtaDataSourceProvider,
+                                                persistenceUnit.getProvider(),
+                                                persistenceUnit.getName(),
+                                                rootUrl,
+                                                "2.2",
+                                                properties,
+                                                sharedCacheMode,
+                                                classLoader,
+                                                transactionType,
+                                                validationMode);
+                                                
+    }
+    return returnValue;
   }
   
 }

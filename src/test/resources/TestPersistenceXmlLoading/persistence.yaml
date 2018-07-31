@@ -1,0 +1,13 @@
+persistence:
+  version: "2.2"
+  units:
+    - name: "test"
+      transaction-type: "RESOURCE_LOCAL"
+      javax:
+        persistence:
+          jdbc:
+            driver: "org.h2.Driver"
+            password: ""
+            user: "sa"
+            url: "jdbc:h2:mem:test"
+    - name: "fred"
