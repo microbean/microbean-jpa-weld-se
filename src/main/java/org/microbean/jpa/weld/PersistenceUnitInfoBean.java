@@ -14,7 +14,7 @@
  * implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package org.microbean.jpa;
+package org.microbean.jpa.weld;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -266,10 +266,10 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
     return this.mappingFileNames;
   }
 
-  static final Collection<? extends PersistenceUnitInfoBean> fromPersistence(final Persistence persistence,
-                                                                             final URL rootUrl,
-                                                                             final Function<? super String, DataSource> jtaDataSourceProvider,
-                                                                             final Function<? super String, DataSource> nonJtaDataSourceProvider)
+  public static final Collection<? extends PersistenceUnitInfoBean> fromPersistence(final Persistence persistence,
+                                                                                    final URL rootUrl,
+                                                                                    final Function<? super String, DataSource> jtaDataSourceProvider,
+                                                                                    final Function<? super String, DataSource> nonJtaDataSourceProvider)
     throws MalformedURLException {
     Objects.requireNonNull(persistence);
     Objects.requireNonNull(rootUrl);

@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.microbean</groupId>
-  <artifactId>microbean-jpa</artifactId>
+  <artifactId>microbean-jpa-weld-se</artifactId>
   <version>0.0.1-SNAPSHOT</version>
 
   <parent>
@@ -12,8 +12,8 @@
     <version>5</version>
   </parent>
 
-  <name>microBean JPA</name>
-  <description>Tools for using JPA in CDI.</description>
+  <name>microBean JPA (Weld SE)</name>
+  <description>Tools for using JPA in Weld SE.</description>
   <inceptionYear>2018</inceptionYear>
   <url>https://microbean.github.io/${project.artifactId}</url>
 
@@ -63,6 +63,7 @@
 
       <!-- Normal dependencies. -->
 
+      
       <dependency>
         <groupId>com.h2database</groupId>
         <artifactId>h2</artifactId>
@@ -126,13 +127,6 @@
         <type>jar</type>
       </dependency>
       
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-simple</artifactId>
-        <version>1.7.25</version>
-        <type>jar</type>
-      </dependency>
-
     </dependencies>
   </dependencyManagement>
 
@@ -215,8 +209,17 @@
       <scope>provided</scope>
     </dependency>
 
+    
     <!-- Compile-scoped dependencies. -->
 
+    
+    <dependency>
+      <groupId>org.jboss.weld</groupId>
+      <artifactId>weld-spi</artifactId>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>
+    
     <dependency>
       <groupId>org.microbean</groupId>
       <artifactId>microbean-development-annotations</artifactId>
@@ -308,7 +311,6 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <systemPropertyVariables>
-            <!-- <jaxb.debug>false</jaxb.debug> -->
             <project.build.directory>${project.build.directory}</project.build.directory>
           </systemPropertyVariables>
         </configuration>
@@ -346,8 +348,6 @@
 
     <!-- maven-surefire-plugin properties; see http://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html -->
     <trimStackTrace>false</trimStackTrace>
-
-    <skipClusterTests>true</skipClusterTests>
 
   </properties>
 

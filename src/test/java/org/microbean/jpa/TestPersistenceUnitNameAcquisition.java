@@ -31,6 +31,7 @@ import javax.inject.Provider;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceContext;
 
 import javax.persistence.spi.PersistenceUnitInfo;
 
@@ -48,49 +49,28 @@ import static org.microbean.main.Main.main;
 public class TestPersistenceUnitNameAcquisition {
 
   @Inject
-  @Named("test")
-  private PersistenceUnitInfo persistenceUnitInfo;
-
-  @Inject
-  @Named("test")
-  private EntityManagerFactory emf;
-
-  @Inject
   private UserTransaction injectedUserTransaction;
 
   @Inject
   private TestPersistenceUnitNameAcquisition self;
 
-  @Inject
-  @Default
-  @Named("test")
-  private Provider<EntityManager> testEm;
+  @PersistenceContext(unitName = "test")
+  private EntityManager test;
   
   public TestPersistenceUnitNameAcquisition() {
     super();
   }
 
-  /*
-  @Produces
-  @Named("test")
-  private static final PersistenceUnitInfo producePersistenceUnitInfo() {
-    return null; // TODO fixme
-  }
-  */
-
-  
-
   private final void onStartup(@Observes @Initialized(ApplicationScoped.class) final Object event, final UserTransaction userTransaction) {
-    assertNotNull(this.emf);
     assertNotNull(userTransaction);
     assertNotNull(this.self);
+    assertNotNull(this.test);
     this.self.frobnicate();
   }
 
   @Transactional(TxType.REQUIRED)
   public void frobnicate() {
     System.out.println("*** frobnicating");
-    final EntityManager em = this.testEm.get();
   }
 
   @Test
