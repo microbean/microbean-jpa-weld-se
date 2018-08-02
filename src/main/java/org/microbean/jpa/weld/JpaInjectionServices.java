@@ -49,15 +49,13 @@ import org.jboss.weld.injection.spi.ResourceReferenceFactory;
 
 public class JpaInjectionServices implements org.jboss.weld.injection.spi.JpaInjectionServices {
 
-  private final Map<String, EntityManagerFactory> emfs;
+  private Map<String, EntityManagerFactory> emfs;
   
   public JpaInjectionServices() {
     super();
-    this.emfs = new ConcurrentHashMap<>();
   }
 
   public ResourceReferenceFactory<EntityManager> registerPersistenceContextInjectionPoint(final InjectionPoint injectionPoint) {
-    System.out.println("*** registerPersistenceContextInjectionPoint");
     Objects.requireNonNull(injectionPoint);
     final Annotated annotatedMember = injectionPoint.getAnnotated();
     assert annotatedMember != null;
@@ -76,13 +74,20 @@ public class JpaInjectionServices implements org.jboss.weld.injection.spi.JpaInj
     } else {
       name = n;
     }
+    synchronized (this) {
+      if (this.emfs == null) {
+        this.emfs = new ConcurrentHashMap<>();
+      }
+    }
     return () -> new EntityManagerResourceReference(this.emfs, name);
   }
 
   @Override
   public ResourceReferenceFactory<EntityManagerFactory> registerPersistenceUnitInjectionPoint(final InjectionPoint injectionPoint) {
-    final PersistenceUnit persistenceUnitAnnotation =
-      Objects.requireNonNull(injectionPoint).getAnnotated().getAnnotation(PersistenceUnit.class);
+    Objects.requireNonNull(injectionPoint);
+    final Annotated annotatedMember = injectionPoint.getAnnotated();
+    assert annotatedMember != null;
+    final PersistenceUnit persistenceUnitAnnotation = annotatedMember.getAnnotation(PersistenceUnit.class);
     if (persistenceUnitAnnotation == null) {
       throw new IllegalArgumentException("injectionPoint.getAnnotated().getAnnotation(PersistenceUnit.class) == null");
     }
@@ -97,6 +102,11 @@ public class JpaInjectionServices implements org.jboss.weld.injection.spi.JpaInj
     } else {
       name = n;
     }
+    synchronized (this) {
+      if (this.emfs == null) {
+        this.emfs = new ConcurrentHashMap<>();
+      }
+    }
     return () -> new EntityManagerFactoryResourceReference(this.emfs, name);
   }
 
@@ -110,13 +120,13 @@ public class JpaInjectionServices implements org.jboss.weld.injection.spi.JpaInj
   @Override
   public final EntityManagerFactory resolvePersistenceUnit(final InjectionPoint injectionPoint) {
     return this.registerPersistenceUnitInjectionPoint(injectionPoint).createResource().getInstance();
-
   }
 
   @Override
-  public void cleanup() {
-    if (!this.emfs.isEmpty()) {
-      final Collection<? extends Entry<? extends String, ? extends EntityManagerFactory>> entries = this.emfs.entrySet();
+  public final void cleanup() {
+    final Map<? extends String, ? extends EntityManagerFactory> emfs = this.emfs;
+    if (emfs != null && !emfs.isEmpty()) {
+      final Collection<? extends Entry<? extends String, ? extends EntityManagerFactory>> entries = emfs.entrySet();
       assert entries != null;
       assert !entries.isEmpty();
       final Iterator<? extends Entry<? extends String, ? extends EntityManagerFactory>> iterator = entries.iterator();
@@ -155,13 +165,50 @@ public class JpaInjectionServices implements org.jboss.weld.injection.spi.JpaInj
     return CDI.current().select(PersistenceUnitInfo.class, NamedLiteral.of(Objects.requireNonNull(name))).get();
   }
 
+  private static final EntityManagerFactory getOrCreateEntityManagerFactory(final Map<? super String, EntityManagerFactory> emfs,
+                                                                            final PersistenceUnitInfo persistenceUnitInfo,
+                                                                            final String name) {
+    Objects.requireNonNull(emfs);
+    Objects.requireNonNull(name);
+    final EntityManagerFactory returnValue;
+    if (persistenceUnitInfo == null) {
+      returnValue =
+        emfs.computeIfAbsent(name,
+                             n -> {
+                               return
+                               Persistence.createEntityManagerFactory(name);
+                             });
+
+    } else {
+      final PersistenceProvider persistenceProvider = getPersistenceProvider(persistenceUnitInfo);
+      assert persistenceProvider != null;
+      returnValue =
+        emfs.computeIfAbsent(name,
+                             n -> {
+                               final Map<String, Object> properties = new HashMap<>();
+                               properties.put("javax.persistence.bean.manager",
+                                              CDI.current().getBeanManager());
+                               return
+                                 persistenceProvider.createContainerEntityManagerFactory(persistenceUnitInfo,
+                                                                                       properties);
+                             });
+    }
+    return returnValue;
+  }
+
+  
+  /*
+   * Inner and nested classes.
+   */
+
+  
   private static final class EntityManagerFactoryResourceReference implements ResourceReference<EntityManagerFactory> {
 
-    private final Map<String, EntityManagerFactory> emfs;
+    private final Map<? super String, EntityManagerFactory> emfs;
 
     private final String name;
 
-    private EntityManagerFactoryResourceReference(final Map<String, EntityManagerFactory> emfs,
+    private EntityManagerFactoryResourceReference(final Map<? super String, EntityManagerFactory> emfs,
                                                   final String name) {
       super();
       this.emfs = Objects.requireNonNull(emfs);
@@ -172,21 +219,13 @@ public class JpaInjectionServices implements org.jboss.weld.injection.spi.JpaInj
     public final EntityManagerFactory getInstance() {
       final PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(this.name);
       assert persistenceUnitInfo != null;
-      final EntityManagerFactory emf;
+      final EntityManagerFactory returnValue;
       if (PersistenceUnitTransactionType.RESOURCE_LOCAL.equals(persistenceUnitInfo.getTransactionType())) {
-        emf = this.emfs.computeIfAbsent(this.name, n -> Persistence.createEntityManagerFactory(this.name));
+        returnValue = getOrCreateEntityManagerFactory(emfs, null, name);
       } else {
-        final PersistenceProvider persistenceProvider = getPersistenceProvider(persistenceUnitInfo);
-        assert persistenceProvider != null;
-        emf = this.emfs.computeIfAbsent(this.name,
-                                        n -> {
-                                          final Map<String, Object> properties = new HashMap<>();
-                                          properties.put("javax.persistence.bean.manager",
-                                                         CDI.current().getBeanManager());
-                                          return persistenceProvider.createContainerEntityManagerFactory(persistenceUnitInfo, properties);
-                                        });
+        returnValue = getOrCreateEntityManagerFactory(emfs, persistenceUnitInfo, name);
       }
-      return emf;
+      return returnValue;
     }
 
     @Override
@@ -204,7 +243,7 @@ public class JpaInjectionServices implements org.jboss.weld.injection.spi.JpaInj
 
     private final String name;
 
-    private EntityManager em;
+    private volatile EntityManager em;
 
     private EntityManagerResourceReference(final Map<String, EntityManagerFactory> emfs,
                                            final String name) {
@@ -215,34 +254,29 @@ public class JpaInjectionServices implements org.jboss.weld.injection.spi.JpaInj
     
     @Override
     public final EntityManager getInstance() {
-      System.out.println("*** getInstance (EntityManager)");
-      if (this.em == null) {
+      EntityManager returnValue = this.em;
+      if (returnValue == null) {
         final PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(this.name);
         assert persistenceUnitInfo != null;
         final EntityManagerFactory emf;
         if (PersistenceUnitTransactionType.RESOURCE_LOCAL.equals(persistenceUnitInfo.getTransactionType())) {
-          emf = this.emfs.computeIfAbsent(this.name, n -> Persistence.createEntityManagerFactory(this.name));
+          emf = getOrCreateEntityManagerFactory(this.emfs, null, this.name);
         } else {
-          final PersistenceProvider persistenceProvider = getPersistenceProvider(persistenceUnitInfo);
-          assert persistenceProvider != null;
-          emf = this.emfs.computeIfAbsent(this.name,
-                                          n -> {
-                                            final Map<String, Object> properties = new HashMap<>();
-                                            properties.put("javax.persistence.bean.manager",
-                                                           CDI.current().getBeanManager());
-                                            return persistenceProvider.createContainerEntityManagerFactory(persistenceUnitInfo, properties);
-                                          });
+          emf = getOrCreateEntityManagerFactory(this.emfs, persistenceUnitInfo, this.name);
         }
         assert emf != null;
-        this.em = emf.createEntityManager();
+        returnValue = emf.createEntityManager();
+        assert returnValue != null;
+        this.em = returnValue;
       }
-      return this.em;
+      return returnValue;
     }
 
     @Override
     public final void release() {
-      if (this.em != null && this.em.isOpen()) {
-        this.em.close();
+      final EntityManager em = this.em;
+      if (em != null && em.isOpen()) {
+        em.close();
       }
     }
     
