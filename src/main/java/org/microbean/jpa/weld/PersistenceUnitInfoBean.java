@@ -271,7 +271,6 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
                                                                                     final Function<? super String, DataSource> jtaDataSourceProvider,
                                                                                     final Function<? super String, DataSource> nonJtaDataSourceProvider)
     throws MalformedURLException {
-    Objects.requireNonNull(persistence);
     Objects.requireNonNull(rootUrl);
     final Collection<PersistenceUnitInfoBean> returnValue;
     if (persistence == null) {
