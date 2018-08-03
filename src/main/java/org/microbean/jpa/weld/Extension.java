@@ -20,24 +20,42 @@ import java.io.IOException;
 
 import java.net.URL;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 import javax.enterprise.event.Observes;
 
 import javax.enterprise.inject.literal.NamedLiteral;
 
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
+import javax.enterprise.inject.spi.AnnotatedType;
+import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
+import javax.enterprise.inject.spi.ProcessAnnotatedType;
+import javax.enterprise.inject.spi.WithAnnotations;
 
 import javax.inject.Singleton;
+
+import javax.persistence.Converter;
+import javax.persistence.Embeddable;
+import javax.persistence.Entity;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.PersistenceUnit;
 
 import javax.persistence.spi.PersistenceProvider;
 import javax.persistence.spi.PersistenceProviderResolver;
 import javax.persistence.spi.PersistenceProviderResolverHolder;
 
 import javax.persistence.spi.PersistenceUnitInfo;
+
+import javax.sql.DataSource;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -47,8 +65,45 @@ import org.microbean.jpa.jaxb.Persistence;
 
 public class Extension implements javax.enterprise.inject.spi.Extension {
 
+  private final Map<String, Set<Class<?>>> entityClassesByPersistenceUnitNames;
+  
   public Extension() {
     super();
+    this.entityClassesByPersistenceUnitNames = new HashMap<>();
+  }
+
+  private final void discoverManagedClasses(@Observes @WithAnnotations({ Converter.class, Entity.class, Embeddable.class, MappedSuperclass.class }) final ProcessAnnotatedType<?> event) {
+    if (event != null) {
+      final AnnotatedType<?> annotatedType = event.getAnnotatedType();
+      if (annotatedType != null) {
+        final Class<?> entityClass = annotatedType.getJavaClass();
+        assert entityClass != null;
+        final Set<PersistenceUnit> persistenceUnits = annotatedType.getAnnotations(PersistenceUnit.class);
+        if (persistenceUnits == null || persistenceUnits.isEmpty()) {
+          Set<Class<?>> entityClasses = this.entityClassesByPersistenceUnitNames.get("");
+          if (entityClasses == null) {
+            entityClasses = new HashSet<>();
+            this.entityClassesByPersistenceUnitNames.put("", entityClasses);
+          }
+          entityClasses.add(entityClass);
+        } else {
+          for (final PersistenceUnit persistenceUnit : persistenceUnits) {
+            String name = "";
+            if (persistenceUnit != null) {
+              name = persistenceUnit.unitName();
+              assert name != null;
+            }
+            Set<Class<?>> entityClasses = this.entityClassesByPersistenceUnitNames.get(name);
+            if (entityClasses == null) {
+              entityClasses = new HashSet<>();
+              this.entityClassesByPersistenceUnitNames.put(name, entityClasses);
+            }
+            entityClasses.add(entityClass);
+          }
+        }
+        event.veto(); // entities can't be beans
+      }
+    }
   }
 
   private final void afterBeanDiscovery(@Observes final AfterBeanDiscovery event, final BeanManager beanManager)
@@ -90,13 +145,21 @@ public class Extension implements javax.enterprise.inject.spi.Extension {
           final Collection<? extends PersistenceUnitInfo> persistenceUnitInfos =
             PersistenceUnitInfoBean.fromPersistence((Persistence)unmarshaller.unmarshal(url),
                                                     new URL(url, "../.."),
-                                                    null,
-                                                    null); // TODO: nulls need to be datasource providers
+                                                    this.entityClassesByPersistenceUnitNames,
+                                                    jtaDataSourceName -> this.getJtaDataSource(jtaDataSourceName, beanManager),
+                                                    nonJtaDataSourceName -> this.getNonJtaDataSource(nonJtaDataSourceName, beanManager));
           for (final PersistenceUnitInfo persistenceUnitInfo : persistenceUnitInfos) {
+            assert persistenceUnitInfo != null;
+
+            String persistenceUnitName = persistenceUnitInfo.getPersistenceUnitName();
+            if (persistenceUnitName == null) {
+              persistenceUnitName = "";
+            }
+
             event.addBean()
               .types(Collections.singleton(PersistenceUnitInfo.class))
               .scope(Singleton.class)
-              .addQualifiers(NamedLiteral.of(persistenceUnitInfo.getPersistenceUnitName()))
+              .addQualifiers(NamedLiteral.of(persistenceUnitName))
               .createWith(cc -> persistenceUnitInfo);
 
             final String providerClassName = persistenceUnitInfo.getPersistenceProviderClassName();
@@ -121,6 +184,28 @@ public class Extension implements javax.enterprise.inject.spi.Extension {
         }
       }
     }
+  }
+
+  private final DataSource getJtaDataSource(final String dataSourceName, final BeanManager beanManager) {
+    Objects.requireNonNull(dataSourceName);
+    Objects.requireNonNull(beanManager);
+    final Bean<?> bean = beanManager.resolve(beanManager.getBeans(DataSource.class, NamedLiteral.of(dataSourceName)));
+    DataSource returnValue = null;
+    if (bean != null) {
+      returnValue = (DataSource)beanManager.getReference(bean, DataSource.class, beanManager.createCreationalContext(bean));
+    }
+    return returnValue;
+  }
+
+  private final DataSource getNonJtaDataSource(final String dataSourceName, final BeanManager beanManager) {
+    Objects.requireNonNull(dataSourceName);
+    Objects.requireNonNull(beanManager);
+    final Bean<?> bean = beanManager.resolve(beanManager.getBeans(DataSource.class, NamedLiteral.of(dataSourceName)));
+    DataSource returnValue = null;
+    if (bean != null) {
+      returnValue = (DataSource)beanManager.getReference(bean, DataSource.class, beanManager.createCreationalContext(bean));
+    }
+    return returnValue;
   }
 
 }

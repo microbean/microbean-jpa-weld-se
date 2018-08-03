@@ -112,6 +112,13 @@
         <version>5.9.0.Final</version>
         <type>jar</type>
       </dependency>
+
+      <dependency>
+        <groupId>org.microbean</groupId>
+        <artifactId>microbean-datasource-cdi-hikaricp</artifactId>
+        <version>0.0.2</version>
+        <type>jar</type>
+      </dependency>
       
       <dependency>
         <groupId>org.microbean</groupId>
@@ -160,6 +167,13 @@
       <groupId>org.microbean</groupId>
       <artifactId>microbean-weld-se-environment</artifactId>
       <type>pom</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.microbean</groupId>
+      <artifactId>microbean-datasource-cdi-hikaricp</artifactId>
+      <type>jar</type>
       <scope>test</scope>
     </dependency>
     

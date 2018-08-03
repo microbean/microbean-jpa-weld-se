@@ -35,6 +35,8 @@ import javax.persistence.PersistenceContext;
 
 import javax.persistence.spi.PersistenceUnitInfo;
 
+import javax.sql.DataSource;
+
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import javax.transaction.UserTransaction;
@@ -55,7 +57,10 @@ public class TestPersistenceUnitNameAcquisition {
   private TestPersistenceUnitNameAcquisition self;
 
   @PersistenceContext(unitName = "test")
-  private EntityManager test;
+  private EntityManager testEm;
+
+  @Inject
+  private DataSource test;
   
   public TestPersistenceUnitNameAcquisition() {
     super();
@@ -63,14 +68,17 @@ public class TestPersistenceUnitNameAcquisition {
 
   private final void onStartup(@Observes @Initialized(ApplicationScoped.class) final Object event, final UserTransaction userTransaction) {
     assertNotNull(userTransaction);
+    System.out.println("*** on startup; user transaction: " + userTransaction);
     assertNotNull(this.self);
     assertNotNull(this.test);
+    assertNotNull(this.testEm);
     this.self.frobnicate();
   }
 
   @Transactional(TxType.REQUIRED)
   public void frobnicate() {
     System.out.println("*** frobnicating");
+    System.out.println("*** injected UserTransaction: " + injectedUserTransaction);
   }
 
   @Test

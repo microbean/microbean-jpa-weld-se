@@ -14,20 +14,27 @@
  * implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package org.microbean.jpa.annotation;
+package org.microbean.jpa.weld;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.lang.annotation.ElementType;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.PersistenceUnit;
 
-import javax.inject.Qualifier;
+import javax.enterprise.context.Dependent;
 
-@Documented
-@Qualifier
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.METHOD, ElementType.TYPE })
-public @interface ResourceLocal {
+// This annotation is a bean-defining annotation,
+// but @Entity-annotated classes will be vetoed by the extension.
+// This is just a cheap way to get this class discovered in an
+// implicit (vs. explicit) bean archive.
+@Dependent
+@Entity
+public class Person {
+
+  @Id
+  private long id;
+  
+  public Person() {
+    super();
+  }
   
 }

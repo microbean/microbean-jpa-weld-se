@@ -23,8 +23,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Set;
 
 import java.util.function.Function;
 
@@ -268,6 +270,7 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
 
   public static final Collection<? extends PersistenceUnitInfoBean> fromPersistence(final Persistence persistence,
                                                                                     final URL rootUrl,
+                                                                                    final Map<? extends String, ? extends Set<? extends Class<?>>> classes,
                                                                                     final Function<? super String, DataSource> jtaDataSourceProvider,
                                                                                     final Function<? super String, DataSource> nonJtaDataSourceProvider)
     throws MalformedURLException {
@@ -285,6 +288,7 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
           assert persistenceUnit != null;
           returnValue.add(fromPersistenceUnit(persistenceUnit,
                                               rootUrl,
+                                              classes,
                                               jtaDataSourceProvider,
                                               nonJtaDataSourceProvider));
         }
@@ -295,6 +299,7 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
   
   static final PersistenceUnitInfoBean fromPersistenceUnit(final PersistenceUnit persistenceUnit,
                                                            final URL rootUrl,
+                                                           final Map<? extends String, ? extends Set<? extends Class<?>>> unlistedClasses,
                                                            final Function<? super String, DataSource> jtaDataSourceProvider,
                                                            final Function<? super String, DataSource> nonJtaDataSourceProvider)
     throws MalformedURLException {
@@ -311,8 +316,8 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
         }        
       }
       
-      final Collection<? extends String> classes = persistenceUnit.getClazz();
       final Collection<? extends String> mappingFiles = persistenceUnit.getMappingFile();
+
       final Properties properties = new Properties();
       final PersistenceUnit.Properties persistenceUnitProperties = persistenceUnit.getProperties();
       if (persistenceUnitProperties != null) {
@@ -324,9 +329,40 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
           }
         }
       }
-      final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-      final Boolean excludeUnlistedClasses = persistenceUnit.isExcludeUnlistedClasses();
 
+      final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+
+      final Collection<String> classes = persistenceUnit.getClazz();
+      assert classes != null;
+      String name = persistenceUnit.getName();
+      if (name == null) {
+        name = "";
+      }
+      final Boolean excludeUnlistedClasses = persistenceUnit.isExcludeUnlistedClasses();
+      if (!Boolean.TRUE.equals(excludeUnlistedClasses)) {
+        if (unlistedClasses != null && !unlistedClasses.isEmpty()) {
+          Collection<? extends Class<?>> myUnlistedClasses = unlistedClasses.get(name);
+          if (myUnlistedClasses != null && !myUnlistedClasses.isEmpty()) {
+            for (final Class<?> unlistedClass : myUnlistedClasses) {
+              if (unlistedClass != null) {
+                classes.add(unlistedClass.getName());
+              }
+            }
+          }
+          // Also add "default" ones
+          if (!name.isEmpty()) {
+            myUnlistedClasses = unlistedClasses.get("");
+            if (myUnlistedClasses != null && !myUnlistedClasses.isEmpty()) {
+              for (final Class<?> unlistedClass : myUnlistedClasses) {
+                if (unlistedClass != null) {
+                  classes.add(unlistedClass.getName());
+                }
+              }
+            }
+          }
+        }
+      }
+      
       final SharedCacheMode sharedCacheMode;
       final PersistenceUnitCachingType persistenceUnitCachingType = persistenceUnit.getSharedCacheMode();
       if (persistenceUnitCachingType == null) {
@@ -352,14 +388,14 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
       }
       
       returnValue = new PersistenceUnitInfoBean(classLoader,
-                                                excludeUnlistedClasses == null ? false : excludeUnlistedClasses,
+                                                excludeUnlistedClasses == null ? true : excludeUnlistedClasses,
                                                 jarFileUrls,
                                                 jtaDataSourceProvider,
                                                 classes,
                                                 mappingFiles,
                                                 nonJtaDataSourceProvider,
                                                 persistenceUnit.getProvider(),
-                                                persistenceUnit.getName(),
+                                                name,
                                                 rootUrl,
                                                 "2.2",
                                                 properties,

@@ -1,1 +1,2 @@
 org.microbean.jpa.SpecializedNarayanaExtension
+org.microbean.datasource.cdi.hikaricp.HikariCPExtension

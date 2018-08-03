@@ -16,6 +16,8 @@
  */
 package org.microbean.jpa;
 
+import java.util.Collection;
+
 import javax.persistence.spi.PersistenceUnitInfo;
 
 import javax.xml.bind.JAXBContext;
@@ -26,8 +28,11 @@ import javax.xml.bind.Unmarshaller;
 import org.junit.Test;
 
 import org.microbean.jpa.jaxb.Persistence;
+import org.microbean.jpa.jaxb.Persistence.PersistenceUnit;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 public class TestPersistenceXmlLoading {
 
@@ -43,7 +48,13 @@ public class TestPersistenceXmlLoading {
     unmarshaller.setEventHandler(new javax.xml.bind.helpers.DefaultValidationEventHandler());
     final Persistence p = (Persistence)unmarshaller.unmarshal(Thread.currentThread().getContextClassLoader().getResource(this.getClass().getSimpleName() + "/persistence.xml"));
     assertNotNull(p);
-    System.out.println(p.getPersistenceUnit());
+    final Collection<? extends PersistenceUnit> persistenceUnits = p.getPersistenceUnit();
+    assertNotNull(persistenceUnits);
+    assertEquals(1, persistenceUnits.size());
+    final PersistenceUnit persistenceUnit = persistenceUnits.iterator().next();
+    assertNotNull(persistenceUnit);
+    final Boolean excludeUnlistedClasses = persistenceUnit.isExcludeUnlistedClasses();
+    assertNull(excludeUnlistedClasses);
   }
 
 }
