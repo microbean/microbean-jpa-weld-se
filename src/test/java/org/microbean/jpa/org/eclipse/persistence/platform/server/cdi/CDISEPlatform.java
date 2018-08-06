@@ -67,7 +67,7 @@ public class CDISEPlatform extends JMXServerPlatformBase {
    * @param session the {@link DatabaseSession} this platform will
    * wrap; must not be {@code null}
    *
-   * @see ServerPlatformBase#ServerPlatformBase(DatabaseSession)
+   * @see JMXServerPlatformBase#JMXServerPlatformBase(DatabaseSession)
    */
   public CDISEPlatform(final DatabaseSession session) {
     super(session);

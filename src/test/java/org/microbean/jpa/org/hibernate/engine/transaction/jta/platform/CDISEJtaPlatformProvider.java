@@ -14,27 +14,22 @@
  * implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package org.microbean.jpa;
+package org.microbean.jpa.org.hibernate.engine.transaction.jta.platform;
 
-import java.util.Objects;
+import javax.enterprise.inject.spi.CDI;
 
-import javax.transaction.TransactionManager;
+import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
+import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatformProvider;
 
-abstract class TransactionalInterceptorBase extends com.arjuna.ats.jta.cdi.transactional.TransactionalInterceptorBase {
-
-  private static final long serialVersionUID = 1L;
-
-  private final TransactionManager transactionManager;
-
-  protected TransactionalInterceptorBase(final TransactionManager transactionManager,
-                                         final boolean userTransactionAvailable) {
-    super(userTransactionAvailable);
-    this.transactionManager = Objects.requireNonNull(transactionManager);
+public class CDISEJtaPlatformProvider implements JtaPlatformProvider {
+  
+  public CDISEJtaPlatformProvider() {
+    super();
   }
 
   @Override
-  protected final TransactionManager getTransactionManager() {
-    return this.transactionManager;
+  public JtaPlatform getProvidedJtaPlatform() {
+    return CDI.current().select(JtaPlatform.class).get();
   }
   
 }

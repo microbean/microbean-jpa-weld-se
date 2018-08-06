@@ -16,7 +16,13 @@
  */
 package org.microbean.jpa.org.hibernate.engine.transaction.jta.platform;
 
+import java.util.Objects;
+
+import javax.enterprise.context.ApplicationScoped;
+
 import javax.enterprise.inject.spi.CDI;
+
+import javax.inject.Inject;
 
 import javax.transaction.TransactionManager;
 import javax.transaction.UserTransaction;
@@ -28,17 +34,21 @@ import org.hibernate.engine.transaction.jta.platform.internal.AbstractJtaPlatfor
 import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
 import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatformProvider;
 
-public class CDISEJtaPlatform extends AbstractJtaPlatform implements JtaPlatformProvider {
+@ApplicationScoped
+public class CDISEJtaPlatform extends AbstractJtaPlatform {
 
+  private final TransactionManager transactionManager;
+
+  private final UserTransaction userTransaction;
+  
   private static final long serialVersionUID = 1L;
   
-  public CDISEJtaPlatform() {
+  @Inject
+  public CDISEJtaPlatform(final TransactionManager transactionManager,
+                          final UserTransaction userTransaction) {
     super();
-  }
-
-  @Override
-  public CDISEJtaPlatform getProvidedJtaPlatform() {
-    return this;
+    this.transactionManager = Objects.requireNonNull(transactionManager);
+    this.userTransaction = Objects.requireNonNull(userTransaction);
   }
 
   @Override
@@ -48,12 +58,12 @@ public class CDISEJtaPlatform extends AbstractJtaPlatform implements JtaPlatform
   
   @Override
   protected UserTransaction locateUserTransaction() {
-    return CDI.current().select(UserTransaction.class).get();
+    return this.userTransaction;
   }
 
   @Override
   protected TransactionManager locateTransactionManager() {
-    return CDI.current().select(TransactionManager.class).get();
+    return this.transactionManager;
   }
   
 }
