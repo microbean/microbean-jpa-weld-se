@@ -167,8 +167,14 @@ public class Extension implements javax.enterprise.inject.spi.Extension {
               @SuppressWarnings("unchecked")
               final Class<? extends PersistenceProvider> c = (Class<? extends PersistenceProvider>)Class.forName(providerClassName, true, Thread.currentThread().getContextClassLoader());
               assert c != null;
-              final Collection<?> beans = beanManager.getBeans(c);
-              if (beans == null || beans.isEmpty()) {
+              boolean add = true;
+              for (final PersistenceProvider provider : providers) {
+                if (c.equals(provider.getClass())) {
+                  add = false;
+                  break;
+                }
+              }
+              if (add) {
                 // The PersistenceProvider class in question is not
                 // one we already loaded.  Try to add a bean for it
                 // too.
