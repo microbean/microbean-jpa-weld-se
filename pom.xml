@@ -116,14 +116,14 @@
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-narayana-jta-cdi</artifactId>
-        <version>0.0.2</version>
+        <version>0.0.3</version>
         <type>jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-narayana-jta-weld-se</artifactId>
-        <version>0.0.4</version>
+        <version>0.0.6</version>
         <type>jar</type>
       </dependency>
       
