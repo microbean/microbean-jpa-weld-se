@@ -306,42 +306,52 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
     Objects.requireNonNull(persistenceUnit);
     Objects.requireNonNull(rootUrl);
     PersistenceUnitInfoBean returnValue = null;
-    if (persistenceUnit != null) {
-      final Collection<? extends String> jarFiles = persistenceUnit.getJarFile();
-      final List<URL> jarFileUrls = new ArrayList<>();
-      for (final String jarFile : jarFiles) {
-        if (jarFile != null) {
-          // TODO: probably won't work if rootUrl is, say, a jar URL
-          jarFileUrls.add(new URL(rootUrl, jarFile));
-        }        
-      }
-      
-      final Collection<? extends String> mappingFiles = persistenceUnit.getMappingFile();
 
-      final Properties properties = new Properties();
-      final PersistenceUnit.Properties persistenceUnitProperties = persistenceUnit.getProperties();
-      if (persistenceUnitProperties != null) {
-        final Collection<? extends PersistenceUnit.Properties.Property> propertyInstances = persistenceUnitProperties.getProperty();
-        if (propertyInstances != null && !propertyInstances.isEmpty()) {
-          for (final PersistenceUnit.Properties.Property property : propertyInstances) {
-            assert property != null;
-            properties.setProperty(property.getName(), property.getValue());
-          }
+    final Collection<? extends String> jarFiles = persistenceUnit.getJarFile();
+    final List<URL> jarFileUrls = new ArrayList<>();
+    for (final String jarFile : jarFiles) {
+      if (jarFile != null) {
+        // TODO: probably won't work if rootUrl is, say, a jar URL
+        jarFileUrls.add(new URL(rootUrl, jarFile));
+      }        
+    }
+    
+    final Collection<? extends String> mappingFiles = persistenceUnit.getMappingFile();
+    
+    final Properties properties = new Properties();
+    final PersistenceUnit.Properties persistenceUnitProperties = persistenceUnit.getProperties();
+    if (persistenceUnitProperties != null) {
+      final Collection<? extends PersistenceUnit.Properties.Property> propertyInstances = persistenceUnitProperties.getProperty();
+      if (propertyInstances != null && !propertyInstances.isEmpty()) {
+        for (final PersistenceUnit.Properties.Property property : propertyInstances) {
+          assert property != null;
+          properties.setProperty(property.getName(), property.getValue());
         }
       }
-
-      final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-
-      final Collection<String> classes = persistenceUnit.getClazz();
-      assert classes != null;
-      String name = persistenceUnit.getName();
-      if (name == null) {
-        name = "";
-      }
-      final Boolean excludeUnlistedClasses = persistenceUnit.isExcludeUnlistedClasses();
-      if (!Boolean.TRUE.equals(excludeUnlistedClasses)) {
-        if (unlistedClasses != null && !unlistedClasses.isEmpty()) {
-          Collection<? extends Class<?>> myUnlistedClasses = unlistedClasses.get(name);
+    }
+    
+    final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+    
+    final Collection<String> classes = persistenceUnit.getClazz();
+    assert classes != null;
+    String name = persistenceUnit.getName();
+    if (name == null) {
+      name = "";
+    }
+    final Boolean excludeUnlistedClasses = persistenceUnit.isExcludeUnlistedClasses();
+    if (!Boolean.TRUE.equals(excludeUnlistedClasses)) {
+      if (unlistedClasses != null && !unlistedClasses.isEmpty()) {
+        Collection<? extends Class<?>> myUnlistedClasses = unlistedClasses.get(name);
+        if (myUnlistedClasses != null && !myUnlistedClasses.isEmpty()) {
+          for (final Class<?> unlistedClass : myUnlistedClasses) {
+            if (unlistedClass != null) {
+              classes.add(unlistedClass.getName());
+            }
+          }
+        }
+        // Also add "default" ones
+        if (!name.isEmpty()) {
+          myUnlistedClasses = unlistedClasses.get("");
           if (myUnlistedClasses != null && !myUnlistedClasses.isEmpty()) {
             for (final Class<?> unlistedClass : myUnlistedClasses) {
               if (unlistedClass != null) {
@@ -349,62 +359,50 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
               }
             }
           }
-          // Also add "default" ones
-          if (!name.isEmpty()) {
-            myUnlistedClasses = unlistedClasses.get("");
-            if (myUnlistedClasses != null && !myUnlistedClasses.isEmpty()) {
-              for (final Class<?> unlistedClass : myUnlistedClasses) {
-                if (unlistedClass != null) {
-                  classes.add(unlistedClass.getName());
-                }
-              }
-            }
-          }
         }
       }
-      
-      final SharedCacheMode sharedCacheMode;
-      final PersistenceUnitCachingType persistenceUnitCachingType = persistenceUnit.getSharedCacheMode();
-      if (persistenceUnitCachingType == null) {
-        sharedCacheMode = SharedCacheMode.UNSPECIFIED;
-      } else {
-        sharedCacheMode = SharedCacheMode.valueOf(persistenceUnitCachingType.name());
-      }
-
-      final PersistenceUnitTransactionType transactionType;
-      final org.microbean.jpa.jaxb.PersistenceUnitTransactionType persistenceUnitTransactionType = persistenceUnit.getTransactionType();
-      if (persistenceUnitTransactionType == null) {
-        transactionType = PersistenceUnitTransactionType.JTA; // I guess
-      } else {
-        transactionType = PersistenceUnitTransactionType.valueOf(persistenceUnitTransactionType.name());
-      }
-
-      final ValidationMode validationMode;
-      final PersistenceUnitValidationModeType validationModeType = persistenceUnit.getValidationMode();
-      if (validationModeType == null) {
-        validationMode = ValidationMode.AUTO;
-      } else {
-        validationMode = ValidationMode.valueOf(validationModeType.name());
-      }
-      
-      returnValue = new PersistenceUnitInfoBean(classLoader,
-                                                excludeUnlistedClasses == null ? true : excludeUnlistedClasses,
-                                                jarFileUrls,
-                                                jtaDataSourceProvider,
-                                                classes,
-                                                mappingFiles,
-                                                nonJtaDataSourceProvider,
-                                                persistenceUnit.getProvider(),
-                                                name,
-                                                rootUrl,
-                                                "2.2",
-                                                properties,
-                                                sharedCacheMode,
-                                                classLoader,
-                                                transactionType,
-                                                validationMode);
-                                                
     }
+    
+    final SharedCacheMode sharedCacheMode;
+    final PersistenceUnitCachingType persistenceUnitCachingType = persistenceUnit.getSharedCacheMode();
+    if (persistenceUnitCachingType == null) {
+      sharedCacheMode = SharedCacheMode.UNSPECIFIED;
+    } else {
+      sharedCacheMode = SharedCacheMode.valueOf(persistenceUnitCachingType.name());
+    }
+    
+    final PersistenceUnitTransactionType transactionType;
+    final org.microbean.jpa.jaxb.PersistenceUnitTransactionType persistenceUnitTransactionType = persistenceUnit.getTransactionType();
+    if (persistenceUnitTransactionType == null) {
+      transactionType = PersistenceUnitTransactionType.JTA; // I guess
+    } else {
+      transactionType = PersistenceUnitTransactionType.valueOf(persistenceUnitTransactionType.name());
+    }
+    
+    final ValidationMode validationMode;
+    final PersistenceUnitValidationModeType validationModeType = persistenceUnit.getValidationMode();
+    if (validationModeType == null) {
+      validationMode = ValidationMode.AUTO;
+    } else {
+      validationMode = ValidationMode.valueOf(validationModeType.name());
+    }
+    
+    returnValue = new PersistenceUnitInfoBean(classLoader,
+                                              excludeUnlistedClasses == null ? true : excludeUnlistedClasses,
+                                              jarFileUrls,
+                                              jtaDataSourceProvider,
+                                              classes,
+                                              mappingFiles,
+                                              nonJtaDataSourceProvider,
+                                              persistenceUnit.getProvider(),
+                                              name,
+                                              rootUrl,
+                                              "2.2",
+                                              properties,
+                                              sharedCacheMode,
+                                              classLoader,
+                                              transactionType,
+                                              validationMode);
     return returnValue;
   }
   
