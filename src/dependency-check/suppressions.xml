@@ -7,4 +7,18 @@
     <gav regex="true">^javax\.el:javax\.el-api:.*$</gav>
     <cpe>cpe:/a:oracle:glassfish</cpe>
   </suppress>
+  <suppress>
+    <notes><![CDATA[
+    file name: javax.persistence-2.2.1.jar
+    ]]></notes>
+    <gav regex="true">^org\.eclipse\.persistence:javax\.persistence:.*$</gav>
+    <cpe>cpe:/a:git_project:git</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+    file name: javax.persistence-2.2.1.jar
+    ]]></notes>
+    <gav regex="true">^org\.eclipse\.persistence:javax\.persistence:.*$</gav>
+    <cpe>cpe:/a:git:git</cpe>
+  </suppress>
 </suppressions>

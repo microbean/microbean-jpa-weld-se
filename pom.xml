@@ -4,12 +4,13 @@
 
   <groupId>org.microbean</groupId>
   <artifactId>microbean-jpa-weld-se</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.1.0-SNAPSHOT</version>
 
   <parent>
     <groupId>org.microbean</groupId>
     <artifactId>microbean-pluginmanagement-pom</artifactId>
-    <version>5</version>
+    <version>9</version>
+    <relativePath/>
   </parent>
 
   <name>microBean JPA (Weld SE)</name>
@@ -39,7 +40,7 @@
       <dependency>
         <groupId>org.jboss.weld</groupId>
         <artifactId>weld-core-bom</artifactId>
-        <version>3.0.4.Final</version>
+        <version>3.0.5.Final</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -47,7 +48,7 @@
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-base-specification</artifactId>
-        <version>0.4.2</version>
+        <version>0.4.3</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -55,7 +56,7 @@
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-weld-se-environment</artifactId>
-        <version>0.4.2</version>
+        <version>0.5.1</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -88,42 +89,35 @@
       <dependency>
         <groupId>org.eclipse.persistence</groupId>
         <artifactId>org.eclipse.persistence.jpa</artifactId>
-        <version>2.7.2</version>
+        <version>2.7.3</version>
         <type>jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.hibernate</groupId>
         <artifactId>hibernate-core</artifactId>
-        <version>5.3.4.Final</version>
+        <version>5.3.7.Final</version>
         <type>jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-datasource-cdi-hikaricp</artifactId>
-        <version>0.1.0</version>
-        <type>jar</type>
-      </dependency>
-      
-      <dependency>
-        <groupId>org.microbean</groupId>
-        <artifactId>microbean-jndi</artifactId>
-        <version>0.0.1</version>
+        <version>0.1.2</version>
         <type>jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-narayana-jta-cdi</artifactId>
-        <version>0.0.3</version>
+        <version>0.0.4</version>
         <type>jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-narayana-jta-weld-se</artifactId>
-        <version>0.0.6</version>
+        <version>0.0.7</version>
         <type>jar</type>
       </dependency>
       
@@ -183,20 +177,6 @@
       <type>jar</type>
       <scope>test</scope>
     </dependency>
-    
-    <dependency>
-      <groupId>org.eclipse.persistence</groupId>
-      <artifactId>org.eclipse.persistence.jpa</artifactId>
-      <type>jar</type>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.hibernate</groupId>
-      <artifactId>hibernate-core</artifactId>
-      <type>jar</type>
-      <scope>test</scope>
-    </dependency>
 
 
     <!-- Provided-scoped dependencies. -->
@@ -233,26 +213,26 @@
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.persistence</groupId>
+      <artifactId>org.eclipse.persistence.jpa</artifactId>
+      <type>jar</type>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.hibernate</groupId>
+      <artifactId>hibernate-core</artifactId>
+      <type>jar</type>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
     
   </dependencies>
   
   <build>
-
-    <resources>
-
-      <resource>
-        <directory>src/main/resources</directory>
-      </resource>
-      
-      <resource>
-        <targetPath>META-INF</targetPath>
-        <directory />
-        <includes>
-          <include>LICENSE</include>
-        </includes>
-      </resource>
-
-    </resources>
 
     <testResources />
     
@@ -262,7 +242,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>jaxb2-maven-plugin</artifactId>
-          <version>2.2</version>
+          <version>2.4</version>
           <executions>
             <execution>
               <id>xjc</id>
@@ -289,19 +269,13 @@
         
         <plugin>
           <artifactId>maven-scm-plugin</artifactId>
-          <version>1.9.5</version>
-        </plugin>
-
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>findbugs-maven-plugin</artifactId>
-          <version>3.0.4</version>
+          <version>1.11.1</version>
         </plugin>
 
         <plugin>
           <groupId>org.owasp</groupId>
           <artifactId>dependency-check-maven</artifactId>
-          <version>3.2.1</version>                    
+          <version>4.0.0</version>                    
         </plugin>
         
       </plugins>
@@ -336,26 +310,10 @@
     <!-- dependency-check-plugin properties; see -->
     <suppressionFile>${basedir}/src/dependency-check/suppressions.xml</suppressionFile>
     
-    <!-- findbugs-maven-plugin properties; see http://gleclaire.github.io/findbugs-maven-plugin/findbugs-mojo.html -->
-    <findbugs.effort>Max</findbugs.effort>
-    <findbugs.excludeFilterFile>src/findbugs/exclude.xml</findbugs.excludeFilterFile>
-    <findbugs.threshold>Medium</findbugs.threshold>
-
     <!-- maven-javadoc-plugin properties; see https://maven.apache.org/plugins/maven-javadoc-plugin/javadoc-mojo.html -->
-    <doctitle>&lt;a href="${project.url}" target="_parent"&gt;&lt;span style="font-family:Lobster, cursive;"&gt;µb&lt;/span&gt; ${project.artifactId}&lt;/a&gt; ${project.version} &lt;a href="https://travis-ci.org/microbean/${project.artifactId}" target="_parent"&gt;&lt;img src="https://travis-ci.org/microbean/${project.artifactId}.svg?branch=master"&gt;&lt;/a&gt;</doctitle>
     <excludePackageNames>org.microbean.jpa.jaxb</excludePackageNames>
-    <links>https://microbean.github.io/microbean-development-annotations/apidocs/</links>
+    <links>https://microbean.github.io/microbean-development-annotations/apidocs/,http://docs.jboss.org/cdi/api/2.0/,https://javaee.github.io/javaee-spec/javadocs/,https://www.eclipse.org/eclipselink/api/2.7/,https://docs.jboss.org/hibernate/orm/5.3/javadocs/,https://docs.jboss.org/weld/javadoc/3.0/weld-spi/</links>
     <stylesheetfile>css/stylesheet.css</stylesheetfile>
-
-    <!-- maven-project-info-reports-plugin properties; see https://maven.apache.org/plugins/maven-project-info-reports-plugin/ -->
-    <dependency.locations.enabled>false</dependency.locations.enabled>
-    
-    <!-- maven-release-plugin properties; see http://maven.apache.org/maven-release/maven-release-plugin/perform-mojo.html -->
-    <goals>deploy,site-deploy</goals>
-    <scmCommentPrefix>[maven-release-plugin] [skip ci]</scmCommentPrefix>
-
-    <!-- maven-surefire-plugin properties; see http://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html -->
-    <trimStackTrace>false</trimStackTrace>
 
   </properties>
 
@@ -363,10 +321,6 @@
     <plugins>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.owasp</groupId>
