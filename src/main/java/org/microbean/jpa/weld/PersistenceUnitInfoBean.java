@@ -268,11 +268,11 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
     return this.mappingFileNames;
   }
 
-  static final Collection<? extends PersistenceUnitInfoBean> fromPersistence(final Persistence persistence,
-                                                                             final URL rootUrl,
-                                                                             final Map<? extends String, ? extends Set<? extends Class<?>>> classes,
-                                                                             final Function<? super String, DataSource> jtaDataSourceProvider,
-                                                                             final Function<? super String, DataSource> nonJtaDataSourceProvider)
+  public static final Collection<? extends PersistenceUnitInfoBean> fromPersistence(final Persistence persistence,
+                                                                                    final URL rootUrl,
+                                                                                    final Map<? extends String, ? extends Set<? extends Class<?>>> classes,
+                                                                                    final Function<? super String, DataSource> jtaDataSourceProvider,
+                                                                                    final Function<? super String, DataSource> nonJtaDataSourceProvider)
     throws MalformedURLException {
     Objects.requireNonNull(rootUrl);
     final Collection<PersistenceUnitInfoBean> returnValue;

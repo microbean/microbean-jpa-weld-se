@@ -4,7 +4,7 @@
 
   <groupId>org.microbean</groupId>
   <artifactId>microbean-jpa-weld-se</artifactId>
-  <version>0.1.2-SNAPSHOT</version>
+  <version>0.1.3-SNAPSHOT</version>
 
   <parent>
     <groupId>org.microbean</groupId>
@@ -311,7 +311,7 @@
     <suppressionFile>${basedir}/src/dependency-check/suppressions.xml</suppressionFile>
     
     <!-- maven-javadoc-plugin properties; see https://maven.apache.org/plugins/maven-javadoc-plugin/javadoc-mojo.html -->
-    <excludePackageNames>org.microbean.jpa.jaxb</excludePackageNames>
+    <doclint>-syntax</doclint>
     <links>https://microbean.github.io/microbean-development-annotations/apidocs/,http://docs.jboss.org/cdi/api/2.0/,https://javaee.github.io/javaee-spec/javadocs/,https://www.eclipse.org/eclipselink/api/2.7/,https://docs.jboss.org/hibernate/orm/5.3/javadocs/,https://docs.jboss.org/weld/javadoc/3.0/weld-spi/</links>
     <stylesheetfile>css/stylesheet.css</stylesheetfile>
 
