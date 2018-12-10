@@ -1,3 +1,4 @@
+org.microbean.jpa.jaxb
 org.microbean.jpa.org.eclipse.persistence.platform.server.cdi
 org.microbean.jpa.org.hibernate.engine.transaction.jta.platform
 org.microbean.jpa.weld
