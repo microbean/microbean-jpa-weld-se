@@ -191,115 +191,112 @@
 <span class="sourceLineNo">183</span>    if (persistenceUnitInfo == null) {<a name="line.183"></a>
 <span class="sourceLineNo">184</span>      returnValue =<a name="line.184"></a>
 <span class="sourceLineNo">185</span>        emfs.computeIfAbsent(name,<a name="line.185"></a>
-<span class="sourceLineNo">186</span>                             n -&gt; {<a name="line.186"></a>
-<span class="sourceLineNo">187</span>                               return<a name="line.187"></a>
-<span class="sourceLineNo">188</span>                               Persistence.createEntityManagerFactory(n);<a name="line.188"></a>
-<span class="sourceLineNo">189</span>                             });<a name="line.189"></a>
-<span class="sourceLineNo">190</span><a name="line.190"></a>
-<span class="sourceLineNo">191</span>    } else {<a name="line.191"></a>
-<span class="sourceLineNo">192</span>      final PersistenceProvider persistenceProvider = getPersistenceProvider(persistenceUnitInfo);<a name="line.192"></a>
-<span class="sourceLineNo">193</span>      assert persistenceProvider != null;<a name="line.193"></a>
-<span class="sourceLineNo">194</span>      returnValue =<a name="line.194"></a>
-<span class="sourceLineNo">195</span>        emfs.computeIfAbsent(name,<a name="line.195"></a>
-<span class="sourceLineNo">196</span>                             n -&gt; {<a name="line.196"></a>
-<span class="sourceLineNo">197</span>                               final Map&lt;String, Object&gt; properties = new HashMap&lt;&gt;();<a name="line.197"></a>
-<span class="sourceLineNo">198</span>                               properties.put("javax.persistence.bean.manager",<a name="line.198"></a>
-<span class="sourceLineNo">199</span>                                              CDI.current().getBeanManager());<a name="line.199"></a>
-<span class="sourceLineNo">200</span>                               return<a name="line.200"></a>
-<span class="sourceLineNo">201</span>                                 persistenceProvider.createContainerEntityManagerFactory(persistenceUnitInfo,<a name="line.201"></a>
-<span class="sourceLineNo">202</span>                                                                                       properties);<a name="line.202"></a>
-<span class="sourceLineNo">203</span>                             });<a name="line.203"></a>
-<span class="sourceLineNo">204</span>    }<a name="line.204"></a>
-<span class="sourceLineNo">205</span>    return returnValue;<a name="line.205"></a>
-<span class="sourceLineNo">206</span>  }<a name="line.206"></a>
-<span class="sourceLineNo">207</span><a name="line.207"></a>
-<span class="sourceLineNo">208</span><a name="line.208"></a>
-<span class="sourceLineNo">209</span>  /*<a name="line.209"></a>
-<span class="sourceLineNo">210</span>   * Inner and nested classes.<a name="line.210"></a>
-<span class="sourceLineNo">211</span>   */<a name="line.211"></a>
+<span class="sourceLineNo">186</span>                             n -&gt; Persistence.createEntityManagerFactory(n));<a name="line.186"></a>
+<span class="sourceLineNo">187</span><a name="line.187"></a>
+<span class="sourceLineNo">188</span>    } else {<a name="line.188"></a>
+<span class="sourceLineNo">189</span>      final PersistenceProvider persistenceProvider = getPersistenceProvider(persistenceUnitInfo);<a name="line.189"></a>
+<span class="sourceLineNo">190</span>      assert persistenceProvider != null;<a name="line.190"></a>
+<span class="sourceLineNo">191</span>      returnValue =<a name="line.191"></a>
+<span class="sourceLineNo">192</span>        emfs.computeIfAbsent(name,<a name="line.192"></a>
+<span class="sourceLineNo">193</span>                             n -&gt; {<a name="line.193"></a>
+<span class="sourceLineNo">194</span>                               final Map&lt;String, Object&gt; properties = new HashMap&lt;&gt;();<a name="line.194"></a>
+<span class="sourceLineNo">195</span>                               properties.put("javax.persistence.bean.manager",<a name="line.195"></a>
+<span class="sourceLineNo">196</span>                                              CDI.current().getBeanManager());<a name="line.196"></a>
+<span class="sourceLineNo">197</span>                               return<a name="line.197"></a>
+<span class="sourceLineNo">198</span>                                 persistenceProvider.createContainerEntityManagerFactory(persistenceUnitInfo,<a name="line.198"></a>
+<span class="sourceLineNo">199</span>                                                                                         properties);<a name="line.199"></a>
+<span class="sourceLineNo">200</span>                             });<a name="line.200"></a>
+<span class="sourceLineNo">201</span>    }<a name="line.201"></a>
+<span class="sourceLineNo">202</span>    return returnValue;<a name="line.202"></a>
+<span class="sourceLineNo">203</span>  }<a name="line.203"></a>
+<span class="sourceLineNo">204</span><a name="line.204"></a>
+<span class="sourceLineNo">205</span><a name="line.205"></a>
+<span class="sourceLineNo">206</span>  /*<a name="line.206"></a>
+<span class="sourceLineNo">207</span>   * Inner and nested classes.<a name="line.207"></a>
+<span class="sourceLineNo">208</span>   */<a name="line.208"></a>
+<span class="sourceLineNo">209</span><a name="line.209"></a>
+<span class="sourceLineNo">210</span><a name="line.210"></a>
+<span class="sourceLineNo">211</span>  private static final class EntityManagerFactoryResourceReference implements ResourceReference&lt;EntityManagerFactory&gt; {<a name="line.211"></a>
 <span class="sourceLineNo">212</span><a name="line.212"></a>
-<span class="sourceLineNo">213</span><a name="line.213"></a>
-<span class="sourceLineNo">214</span>  private static final class EntityManagerFactoryResourceReference implements ResourceReference&lt;EntityManagerFactory&gt; {<a name="line.214"></a>
-<span class="sourceLineNo">215</span><a name="line.215"></a>
-<span class="sourceLineNo">216</span>    private final Map&lt;String, EntityManagerFactory&gt; emfs;<a name="line.216"></a>
-<span class="sourceLineNo">217</span><a name="line.217"></a>
-<span class="sourceLineNo">218</span>    private final String name;<a name="line.218"></a>
-<span class="sourceLineNo">219</span><a name="line.219"></a>
-<span class="sourceLineNo">220</span>    private EntityManagerFactoryResourceReference(final Map&lt;String, EntityManagerFactory&gt; emfs,<a name="line.220"></a>
-<span class="sourceLineNo">221</span>                                                  final String name) {<a name="line.221"></a>
-<span class="sourceLineNo">222</span>      super();<a name="line.222"></a>
-<span class="sourceLineNo">223</span>      this.emfs = Objects.requireNonNull(emfs);<a name="line.223"></a>
-<span class="sourceLineNo">224</span>      this.name = Objects.requireNonNull(name);<a name="line.224"></a>
-<span class="sourceLineNo">225</span>    }<a name="line.225"></a>
-<span class="sourceLineNo">226</span><a name="line.226"></a>
-<span class="sourceLineNo">227</span>    @Override<a name="line.227"></a>
-<span class="sourceLineNo">228</span>    public final EntityManagerFactory getInstance() {<a name="line.228"></a>
-<span class="sourceLineNo">229</span>      final PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(this.name);<a name="line.229"></a>
-<span class="sourceLineNo">230</span>      assert persistenceUnitInfo != null;<a name="line.230"></a>
-<span class="sourceLineNo">231</span>      final EntityManagerFactory returnValue;<a name="line.231"></a>
-<span class="sourceLineNo">232</span>      if (PersistenceUnitTransactionType.RESOURCE_LOCAL.equals(persistenceUnitInfo.getTransactionType())) {<a name="line.232"></a>
-<span class="sourceLineNo">233</span>        returnValue = getOrCreateEntityManagerFactory(emfs, null, name);<a name="line.233"></a>
-<span class="sourceLineNo">234</span>      } else {<a name="line.234"></a>
-<span class="sourceLineNo">235</span>        returnValue = getOrCreateEntityManagerFactory(emfs, persistenceUnitInfo, name);<a name="line.235"></a>
-<span class="sourceLineNo">236</span>      }<a name="line.236"></a>
-<span class="sourceLineNo">237</span>      return returnValue;<a name="line.237"></a>
-<span class="sourceLineNo">238</span>    }<a name="line.238"></a>
-<span class="sourceLineNo">239</span><a name="line.239"></a>
-<span class="sourceLineNo">240</span>    @Override<a name="line.240"></a>
-<span class="sourceLineNo">241</span>    public final void release() {<a name="line.241"></a>
-<span class="sourceLineNo">242</span>      final EntityManagerFactory emf = this.emfs.remove(this.name);<a name="line.242"></a>
-<span class="sourceLineNo">243</span>      if (emf != null &amp;&amp; emf.isOpen()) {<a name="line.243"></a>
-<span class="sourceLineNo">244</span>        emf.close();<a name="line.244"></a>
-<span class="sourceLineNo">245</span>      }<a name="line.245"></a>
-<span class="sourceLineNo">246</span>    }<a name="line.246"></a>
-<span class="sourceLineNo">247</span>  }<a name="line.247"></a>
-<span class="sourceLineNo">248</span><a name="line.248"></a>
-<span class="sourceLineNo">249</span>  private static final class EntityManagerResourceReference implements ResourceReference&lt;EntityManager&gt; {<a name="line.249"></a>
-<span class="sourceLineNo">250</span><a name="line.250"></a>
-<span class="sourceLineNo">251</span>    private final Map&lt;String, EntityManagerFactory&gt; emfs;<a name="line.251"></a>
-<span class="sourceLineNo">252</span><a name="line.252"></a>
-<span class="sourceLineNo">253</span>    private final String name;<a name="line.253"></a>
-<span class="sourceLineNo">254</span><a name="line.254"></a>
-<span class="sourceLineNo">255</span>    private volatile EntityManager em;<a name="line.255"></a>
-<span class="sourceLineNo">256</span><a name="line.256"></a>
-<span class="sourceLineNo">257</span>    private EntityManagerResourceReference(final Map&lt;String, EntityManagerFactory&gt; emfs,<a name="line.257"></a>
-<span class="sourceLineNo">258</span>                                           final String name) {<a name="line.258"></a>
-<span class="sourceLineNo">259</span>      super();<a name="line.259"></a>
-<span class="sourceLineNo">260</span>      this.emfs = Objects.requireNonNull(emfs);<a name="line.260"></a>
-<span class="sourceLineNo">261</span>      this.name = Objects.requireNonNull(name);<a name="line.261"></a>
-<span class="sourceLineNo">262</span>    }<a name="line.262"></a>
-<span class="sourceLineNo">263</span><a name="line.263"></a>
-<span class="sourceLineNo">264</span>    @Override<a name="line.264"></a>
-<span class="sourceLineNo">265</span>    public final EntityManager getInstance() {<a name="line.265"></a>
-<span class="sourceLineNo">266</span>      EntityManager returnValue = this.em;<a name="line.266"></a>
-<span class="sourceLineNo">267</span>      if (returnValue == null) {<a name="line.267"></a>
-<span class="sourceLineNo">268</span>        final PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(this.name);<a name="line.268"></a>
-<span class="sourceLineNo">269</span>        assert persistenceUnitInfo != null;<a name="line.269"></a>
-<span class="sourceLineNo">270</span>        final EntityManagerFactory emf;<a name="line.270"></a>
-<span class="sourceLineNo">271</span>        if (PersistenceUnitTransactionType.RESOURCE_LOCAL.equals(persistenceUnitInfo.getTransactionType())) {<a name="line.271"></a>
-<span class="sourceLineNo">272</span>          emf = getOrCreateEntityManagerFactory(this.emfs, null, this.name);<a name="line.272"></a>
-<span class="sourceLineNo">273</span>        } else {<a name="line.273"></a>
-<span class="sourceLineNo">274</span>          emf = getOrCreateEntityManagerFactory(this.emfs, persistenceUnitInfo, this.name);<a name="line.274"></a>
-<span class="sourceLineNo">275</span>        }<a name="line.275"></a>
-<span class="sourceLineNo">276</span>        assert emf != null;<a name="line.276"></a>
-<span class="sourceLineNo">277</span>        returnValue = emf.createEntityManager();<a name="line.277"></a>
-<span class="sourceLineNo">278</span>        assert returnValue != null;<a name="line.278"></a>
-<span class="sourceLineNo">279</span>        this.em = returnValue;<a name="line.279"></a>
-<span class="sourceLineNo">280</span>      }<a name="line.280"></a>
-<span class="sourceLineNo">281</span>      return returnValue;<a name="line.281"></a>
-<span class="sourceLineNo">282</span>    }<a name="line.282"></a>
-<span class="sourceLineNo">283</span><a name="line.283"></a>
-<span class="sourceLineNo">284</span>    @Override<a name="line.284"></a>
-<span class="sourceLineNo">285</span>    public final void release() {<a name="line.285"></a>
-<span class="sourceLineNo">286</span>      final EntityManager em = this.em;<a name="line.286"></a>
-<span class="sourceLineNo">287</span>      if (em != null &amp;&amp; em.isOpen()) {<a name="line.287"></a>
-<span class="sourceLineNo">288</span>        em.close();<a name="line.288"></a>
-<span class="sourceLineNo">289</span>      }<a name="line.289"></a>
-<span class="sourceLineNo">290</span>    }<a name="line.290"></a>
-<span class="sourceLineNo">291</span><a name="line.291"></a>
-<span class="sourceLineNo">292</span>  }<a name="line.292"></a>
-<span class="sourceLineNo">293</span><a name="line.293"></a>
-<span class="sourceLineNo">294</span>}<a name="line.294"></a>
+<span class="sourceLineNo">213</span>    private final Map&lt;String, EntityManagerFactory&gt; emfs;<a name="line.213"></a>
+<span class="sourceLineNo">214</span><a name="line.214"></a>
+<span class="sourceLineNo">215</span>    private final String name;<a name="line.215"></a>
+<span class="sourceLineNo">216</span><a name="line.216"></a>
+<span class="sourceLineNo">217</span>    private EntityManagerFactoryResourceReference(final Map&lt;String, EntityManagerFactory&gt; emfs,<a name="line.217"></a>
+<span class="sourceLineNo">218</span>                                                  final String name) {<a name="line.218"></a>
+<span class="sourceLineNo">219</span>      super();<a name="line.219"></a>
+<span class="sourceLineNo">220</span>      this.emfs = Objects.requireNonNull(emfs);<a name="line.220"></a>
+<span class="sourceLineNo">221</span>      this.name = Objects.requireNonNull(name);<a name="line.221"></a>
+<span class="sourceLineNo">222</span>    }<a name="line.222"></a>
+<span class="sourceLineNo">223</span><a name="line.223"></a>
+<span class="sourceLineNo">224</span>    @Override<a name="line.224"></a>
+<span class="sourceLineNo">225</span>    public final EntityManagerFactory getInstance() {<a name="line.225"></a>
+<span class="sourceLineNo">226</span>      final PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(this.name);<a name="line.226"></a>
+<span class="sourceLineNo">227</span>      assert persistenceUnitInfo != null;<a name="line.227"></a>
+<span class="sourceLineNo">228</span>      final EntityManagerFactory returnValue;<a name="line.228"></a>
+<span class="sourceLineNo">229</span>      if (PersistenceUnitTransactionType.RESOURCE_LOCAL.equals(persistenceUnitInfo.getTransactionType())) {<a name="line.229"></a>
+<span class="sourceLineNo">230</span>        returnValue = getOrCreateEntityManagerFactory(emfs, null, name);<a name="line.230"></a>
+<span class="sourceLineNo">231</span>      } else {<a name="line.231"></a>
+<span class="sourceLineNo">232</span>        returnValue = getOrCreateEntityManagerFactory(emfs, persistenceUnitInfo, name);<a name="line.232"></a>
+<span class="sourceLineNo">233</span>      }<a name="line.233"></a>
+<span class="sourceLineNo">234</span>      return returnValue;<a name="line.234"></a>
+<span class="sourceLineNo">235</span>    }<a name="line.235"></a>
+<span class="sourceLineNo">236</span><a name="line.236"></a>
+<span class="sourceLineNo">237</span>    @Override<a name="line.237"></a>
+<span class="sourceLineNo">238</span>    public final void release() {<a name="line.238"></a>
+<span class="sourceLineNo">239</span>      final EntityManagerFactory emf = this.emfs.remove(this.name);<a name="line.239"></a>
+<span class="sourceLineNo">240</span>      if (emf != null &amp;&amp; emf.isOpen()) {<a name="line.240"></a>
+<span class="sourceLineNo">241</span>        emf.close();<a name="line.241"></a>
+<span class="sourceLineNo">242</span>      }<a name="line.242"></a>
+<span class="sourceLineNo">243</span>    }<a name="line.243"></a>
+<span class="sourceLineNo">244</span>  }<a name="line.244"></a>
+<span class="sourceLineNo">245</span><a name="line.245"></a>
+<span class="sourceLineNo">246</span>  private static final class EntityManagerResourceReference implements ResourceReference&lt;EntityManager&gt; {<a name="line.246"></a>
+<span class="sourceLineNo">247</span><a name="line.247"></a>
+<span class="sourceLineNo">248</span>    private final Map&lt;String, EntityManagerFactory&gt; emfs;<a name="line.248"></a>
+<span class="sourceLineNo">249</span><a name="line.249"></a>
+<span class="sourceLineNo">250</span>    private final String name;<a name="line.250"></a>
+<span class="sourceLineNo">251</span><a name="line.251"></a>
+<span class="sourceLineNo">252</span>    private volatile EntityManager em;<a name="line.252"></a>
+<span class="sourceLineNo">253</span><a name="line.253"></a>
+<span class="sourceLineNo">254</span>    private EntityManagerResourceReference(final Map&lt;String, EntityManagerFactory&gt; emfs,<a name="line.254"></a>
+<span class="sourceLineNo">255</span>                                           final String name) {<a name="line.255"></a>
+<span class="sourceLineNo">256</span>      super();<a name="line.256"></a>
+<span class="sourceLineNo">257</span>      this.emfs = Objects.requireNonNull(emfs);<a name="line.257"></a>
+<span class="sourceLineNo">258</span>      this.name = Objects.requireNonNull(name);<a name="line.258"></a>
+<span class="sourceLineNo">259</span>    }<a name="line.259"></a>
+<span class="sourceLineNo">260</span><a name="line.260"></a>
+<span class="sourceLineNo">261</span>    @Override<a name="line.261"></a>
+<span class="sourceLineNo">262</span>    public final EntityManager getInstance() {<a name="line.262"></a>
+<span class="sourceLineNo">263</span>      EntityManager returnValue = this.em;<a name="line.263"></a>
+<span class="sourceLineNo">264</span>      if (returnValue == null) {<a name="line.264"></a>
+<span class="sourceLineNo">265</span>        final PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(this.name);<a name="line.265"></a>
+<span class="sourceLineNo">266</span>        assert persistenceUnitInfo != null;<a name="line.266"></a>
+<span class="sourceLineNo">267</span>        final EntityManagerFactory emf;<a name="line.267"></a>
+<span class="sourceLineNo">268</span>        if (PersistenceUnitTransactionType.RESOURCE_LOCAL.equals(persistenceUnitInfo.getTransactionType())) {<a name="line.268"></a>
+<span class="sourceLineNo">269</span>          emf = getOrCreateEntityManagerFactory(this.emfs, null, this.name);<a name="line.269"></a>
+<span class="sourceLineNo">270</span>        } else {<a name="line.270"></a>
+<span class="sourceLineNo">271</span>          emf = getOrCreateEntityManagerFactory(this.emfs, persistenceUnitInfo, this.name);<a name="line.271"></a>
+<span class="sourceLineNo">272</span>        }<a name="line.272"></a>
+<span class="sourceLineNo">273</span>        assert emf != null;<a name="line.273"></a>
+<span class="sourceLineNo">274</span>        returnValue = emf.createEntityManager();<a name="line.274"></a>
+<span class="sourceLineNo">275</span>        assert returnValue != null;<a name="line.275"></a>
+<span class="sourceLineNo">276</span>        this.em = returnValue;<a name="line.276"></a>
+<span class="sourceLineNo">277</span>      }<a name="line.277"></a>
+<span class="sourceLineNo">278</span>      return returnValue;<a name="line.278"></a>
+<span class="sourceLineNo">279</span>    }<a name="line.279"></a>
+<span class="sourceLineNo">280</span><a name="line.280"></a>
+<span class="sourceLineNo">281</span>    @Override<a name="line.281"></a>
+<span class="sourceLineNo">282</span>    public final void release() {<a name="line.282"></a>
+<span class="sourceLineNo">283</span>      final EntityManager em = this.em;<a name="line.283"></a>
+<span class="sourceLineNo">284</span>      if (em != null &amp;&amp; em.isOpen()) {<a name="line.284"></a>
+<span class="sourceLineNo">285</span>        em.close();<a name="line.285"></a>
+<span class="sourceLineNo">286</span>      }<a name="line.286"></a>
+<span class="sourceLineNo">287</span>    }<a name="line.287"></a>
+<span class="sourceLineNo">288</span><a name="line.288"></a>
+<span class="sourceLineNo">289</span>  }<a name="line.289"></a>
+<span class="sourceLineNo">290</span><a name="line.290"></a>
+<span class="sourceLineNo">291</span>}<a name="line.291"></a>
 
 
 
