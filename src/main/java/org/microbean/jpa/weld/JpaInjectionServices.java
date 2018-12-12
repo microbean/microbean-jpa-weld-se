@@ -183,10 +183,7 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
     if (persistenceUnitInfo == null) {
       returnValue =
         emfs.computeIfAbsent(name,
-                             n -> {
-                               return
-                               Persistence.createEntityManagerFactory(n);
-                             });
+                             n -> Persistence.createEntityManagerFactory(n));
 
     } else {
       final PersistenceProvider persistenceProvider = getPersistenceProvider(persistenceUnitInfo);
@@ -199,7 +196,7 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
                                               CDI.current().getBeanManager());
                                return
                                  persistenceProvider.createContainerEntityManagerFactory(persistenceUnitInfo,
-                                                                                       properties);
+                                                                                         properties);
                              });
     }
     return returnValue;
