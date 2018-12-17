@@ -10,7 +10,7 @@
     <groupId>org.microbean</groupId>
     <artifactId>microbean-pluginmanagement-pom</artifactId>
     <version>9</version>
-    <relativePath />
+    <relativePath/>
   </parent>
 
   <name>microBean JPA (Weld SE)</name>
@@ -48,7 +48,7 @@
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-base-specification</artifactId>
-        <version>0.4.3</version>
+        <version>0.4.4</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -56,7 +56,7 @@
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-weld-se-environment</artifactId>
-        <version>0.5.1</version>
+        <version>0.5.2</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -102,22 +102,36 @@
 
       <dependency>
         <groupId>org.microbean</groupId>
+        <artifactId>microbean-development-annotations</artifactId>
+        <version>0.2.3</version>
+        <type>jar</type>
+      </dependency>
+
+      <dependency>
+        <groupId>org.microbean</groupId>
+        <artifactId>microbean-hibernate-cdi</artifactId>
+        <version>0.0.1</version>
+        <type>jar</type>
+      </dependency>
+      
+      <dependency>
+        <groupId>org.microbean</groupId>
         <artifactId>microbean-jpa-cdi</artifactId>
-        <version>0.1.4</version>
+        <version>0.1.5</version>
         <type>jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-narayana-jta-cdi</artifactId>
-        <version>0.0.4</version>
+        <version>0.1.2</version>
         <type>jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-narayana-jta-weld-se</artifactId>
-        <version>0.0.7</version>
+        <version>0.1.1</version>
         <type>jar</type>
       </dependency>
       
@@ -225,6 +239,13 @@
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
+
+    <dependency>
+      <groupId>org.microbean</groupId>
+      <artifactId>microbean-hibernate-cdi</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
     
     <dependency>
       <groupId>org.hibernate</groupId>
@@ -244,12 +265,22 @@
       <plugins>
 
         <plugin>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.1.1</version>
+        </plugin>
+        
+        <plugin>
           <artifactId>maven-javadoc-plugin</artifactId>
           <configuration>
             <additionalJOptions combine.children="append">
               <additionalJOption>-J-Dhttp.agent=maven-javadoc-plugin</additionalJOption>
             </additionalJOptions>
           </configuration>
+        </plugin>
+
+        <plugin>
+          <artifactId>maven-project-info-reports-plugin</artifactId>
+          <version>3.0.0</version>
         </plugin>
         
         <plugin>
@@ -268,6 +299,22 @@
     
     <plugins>
 
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-jar</id>
+            <configuration>
+              <archive>
+                <manifestEntries>
+                  <Automatic-Module-Name>org.microbean.jpa.weld</Automatic-Module-Name>
+                </manifestEntries>
+              </archive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
