@@ -117,14 +117,14 @@
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-jpa-cdi</artifactId>
-        <version>0.1.8</version>
+        <version>0.1.9</version>
         <type>jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-narayana-jta-cdi</artifactId>
-        <version>0.1.4</version>
+        <version>0.1.5</version>
         <type>jar</type>
       </dependency>
 
