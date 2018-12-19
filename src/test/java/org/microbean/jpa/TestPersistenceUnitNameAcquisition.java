@@ -57,9 +57,6 @@ public class TestPersistenceUnitNameAcquisition {
   @Inject
   private Transaction injectedTransaction;
   
-  @Inject
-  private TestPersistenceUnitNameAcquisition self;
-
   @PersistenceContext(unitName = "test")
   private EntityManager testEm;
 
@@ -72,12 +69,9 @@ public class TestPersistenceUnitNameAcquisition {
 
   private final void onStartup(@Observes @Initialized(ApplicationScoped.class) final Object event, final UserTransaction userTransaction) {
     assertNotNull(userTransaction);
-    assertNotNull(this.injectedTransaction);
-    assertNotNull(this.injectedUserTransaction);
-    assertNotNull(this.self);
-    assertNotNull(this.test);
     assertNotNull(this.testEm);
-    this.self.frobnicate();
+    assertNotNull(this.test);
+    this.frobnicate();
   }
 
   @Transactional(TxType.REQUIRED)
