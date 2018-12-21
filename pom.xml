@@ -109,6 +109,13 @@
 
       <dependency>
         <groupId>org.microbean</groupId>
+        <artifactId>microbean-eclipselink-cdi</artifactId>
+        <version>0.0.1</version>
+        <type>jar</type>
+      </dependency>
+
+      <dependency>
+        <groupId>org.microbean</groupId>
         <artifactId>microbean-hibernate-cdi</artifactId>
         <version>0.0.1</version>
         <type>jar</type>
@@ -242,6 +249,13 @@
 
     <dependency>
       <groupId>org.microbean</groupId>
+      <artifactId>microbean-eclipselink-cdi</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+
+    <dependency>
+      <groupId>org.microbean</groupId>
       <artifactId>microbean-hibernate-cdi</artifactId>
       <scope>compile</scope>
       <optional>true</optional>
@@ -288,12 +302,6 @@
           <version>1.11.1</version>
         </plugin>
 
-        <plugin>
-          <groupId>org.owasp</groupId>
-          <artifactId>dependency-check-maven</artifactId>
-          <version>4.0.0</version>                    
-        </plugin>
-        
       </plugins>
     </pluginManagement>
     
@@ -334,9 +342,6 @@
 
   <properties>
     
-    <!-- dependency-check-plugin properties; see -->
-    <suppressionFile>${basedir}/src/dependency-check/suppressions.xml</suppressionFile>
-    
     <!-- maven-javadoc-plugin properties; see https://maven.apache.org/plugins/maven-javadoc-plugin/javadoc-mojo.html -->
     <doclint>-syntax</doclint>
     <links>https://microbean.github.io/microbean-development-annotations/apidocs/,http://docs.jboss.org/cdi/api/2.0/,https://javaee.github.io/javaee-spec/javadocs/,https://www.eclipse.org/eclipselink/api/2.7/,https://docs.jboss.org/hibernate/orm/5.3/javadocs/,https://docs.jboss.org/weld/javadoc/3.0/weld-spi/</links>
@@ -356,10 +361,6 @@
             </reports>
           </reportSet>
         </reportSets>
-      </plugin>
-      <plugin>
-        <groupId>org.owasp</groupId>
-        <artifactId>dependency-check-maven</artifactId>
       </plugin>
     </plugins>
   </reporting>
