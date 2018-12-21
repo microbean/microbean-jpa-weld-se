@@ -87,13 +87,6 @@
       </dependency>
 
       <dependency>
-        <groupId>org.hibernate</groupId>
-        <artifactId>hibernate-core</artifactId>
-        <version>5.3.7.Final</version>
-        <type>jar</type>
-      </dependency>
-
-      <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-datasource-cdi-hikaricp</artifactId>
         <version>0.1.4</version>
@@ -114,13 +107,6 @@
         <type>jar</type>
       </dependency>
 
-      <dependency>
-        <groupId>org.microbean</groupId>
-        <artifactId>microbean-hibernate-cdi</artifactId>
-        <version>0.0.1</version>
-        <type>jar</type>
-      </dependency>
-      
       <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-jpa-cdi</artifactId>
@@ -164,6 +150,20 @@
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.eclipse.persistence</groupId>
+      <artifactId>org.eclipse.persistence.jpa</artifactId>
+      <type>jar</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.microbean</groupId>
+      <artifactId>microbean-eclipselink-cdi</artifactId>
+      <type>jar</type>
+      <scope>test</scope>
+    </dependency>
+    
     <dependency>
       <groupId>org.microbean</groupId>
       <artifactId>microbean-weld-se-environment</artifactId>
@@ -239,36 +239,6 @@
       <scope>compile</scope>
     </dependency>
 
-    <dependency>
-      <groupId>org.eclipse.persistence</groupId>
-      <artifactId>org.eclipse.persistence.jpa</artifactId>
-      <type>jar</type>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-
-    <dependency>
-      <groupId>org.microbean</groupId>
-      <artifactId>microbean-eclipselink-cdi</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-
-    <dependency>
-      <groupId>org.microbean</groupId>
-      <artifactId>microbean-hibernate-cdi</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.hibernate</groupId>
-      <artifactId>hibernate-core</artifactId>
-      <type>jar</type>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    
   </dependencies>
   
   <build>
