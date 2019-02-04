@@ -22,6 +22,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Properties;
+import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -38,6 +40,7 @@ import javax.persistence.Persistence;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import javax.persistence.PersistenceUnit;
+import javax.persistence.SynchronizationType;
 
 import javax.persistence.spi.PersistenceProvider;
 import javax.persistence.spi.PersistenceUnitInfo;
@@ -74,12 +77,14 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
     } else {
       name = n;
     }
+    final SynchronizationType synchronizationType = persistenceContextAnnotation.synchronization();
+    assert synchronizationType != null;    
     synchronized (this) {
       if (this.emfs == null) {
         this.emfs = new ConcurrentHashMap<>();
       }
     }
-    return () -> new EntityManagerResourceReference(this.emfs, name);
+    return () -> new EntityManagerResourceReference(this.emfs, name, synchronizationType);
   }
 
   @Override
@@ -186,12 +191,27 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
                              n -> Persistence.createEntityManagerFactory(n));
 
     } else {
+      final Map<String, Object> properties = new HashMap<>();
+      final Properties puProperties = persistenceUnitInfo.getProperties();
+      if (puProperties != null) {
+        final Set<String> stringPropertyNames = puProperties.stringPropertyNames();
+        if (stringPropertyNames != null && !stringPropertyNames.isEmpty()) {
+          for (final String propertyName : stringPropertyNames) {
+            final Object value;
+            if (puProperties.containsKey(propertyName)) {
+              value = puProperties.get(propertyName);
+            } else {
+              value = puProperties.getProperty(propertyName);
+            }
+            properties.put(propertyName, value);
+          }
+        }
+      }
       final PersistenceProvider persistenceProvider = getPersistenceProvider(persistenceUnitInfo);
       assert persistenceProvider != null;
       returnValue =
         emfs.computeIfAbsent(name,
                              n -> {
-                               final Map<String, Object> properties = new HashMap<>();
                                properties.put("javax.persistence.bean.manager",
                                               CDI.current().getBeanManager());
                                return
@@ -249,13 +269,17 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
 
     private final String name;
 
+    private final SynchronizationType synchronizationType;
+
     private volatile EntityManager em;
 
     private EntityManagerResourceReference(final Map<String, EntityManagerFactory> emfs,
-                                           final String name) {
+                                           final String name,
+                                           final SynchronizationType synchronizationType) {
       super();
       this.emfs = Objects.requireNonNull(emfs);
       this.name = Objects.requireNonNull(name);
+      this.synchronizationType = Objects.requireNonNull(synchronizationType);
     }
 
     @Override
@@ -264,14 +288,43 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
       if (returnValue == null) {
         final PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(this.name);
         assert persistenceUnitInfo != null;
+        final Properties p = persistenceUnitInfo.getProperties();
+        final Map<String, Object> puProperties;
+        if (p == null) {
+          puProperties = null;
+        } else {
+          puProperties = new HashMap<>();
+          final Set<String> propertyNames = p.stringPropertyNames();
+          if (propertyNames != null && !propertyNames.isEmpty()) {
+            for (final String propertyName : propertyNames) {
+              final Object value;
+              if (p.containsKey(propertyName)) {
+                value = p.get(propertyName);
+              } else {
+                value = p.getProperty(propertyName);
+              }
+              puProperties.put(propertyName, value);
+            }
+          }
+        }
         final EntityManagerFactory emf;
         if (PersistenceUnitTransactionType.RESOURCE_LOCAL.equals(persistenceUnitInfo.getTransactionType())) {
           emf = getOrCreateEntityManagerFactory(this.emfs, null, this.name);
+          assert emf != null;
+          if (puProperties == null) {
+            returnValue = emf.createEntityManager();
+          } else {
+            returnValue = emf.createEntityManager(puProperties);
+          }
         } else {
           emf = getOrCreateEntityManagerFactory(this.emfs, persistenceUnitInfo, this.name);
+          assert emf != null;
+          if (puProperties == null) {
+            returnValue = emf.createEntityManager(this.synchronizationType);
+          } else {
+            returnValue = emf.createEntityManager(this.synchronizationType, puProperties);
+          }
         }
-        assert emf != null;
-        returnValue = emf.createEntityManager();
         assert returnValue != null;
         this.em = returnValue;
       }
