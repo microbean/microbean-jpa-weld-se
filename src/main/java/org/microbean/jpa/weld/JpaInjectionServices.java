@@ -16,6 +16,8 @@
  */
 package org.microbean.jpa.weld;
 
+import java.lang.annotation.Annotation;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -31,6 +33,8 @@ import javax.enterprise.inject.literal.NamedLiteral;
 
 import javax.enterprise.inject.spi.Annotated;
 import javax.enterprise.inject.spi.AnnotatedField;
+import javax.enterprise.inject.spi.Bean;
+import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.InjectionPoint;
 
@@ -191,29 +195,35 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
                              n -> Persistence.createEntityManagerFactory(n));
 
     } else {
-      final Map<String, Object> properties = new HashMap<>();
-      final Properties puProperties = persistenceUnitInfo.getProperties();
-      if (puProperties != null) {
-        final Set<String> stringPropertyNames = puProperties.stringPropertyNames();
-        if (stringPropertyNames != null && !stringPropertyNames.isEmpty()) {
-          for (final String propertyName : stringPropertyNames) {
-            final Object value;
-            if (puProperties.containsKey(propertyName)) {
-              value = puProperties.get(propertyName);
-            } else {
-              value = puProperties.getProperty(propertyName);
-            }
-            properties.put(propertyName, value);
-          }
-        }
-      }
       final PersistenceProvider persistenceProvider = getPersistenceProvider(persistenceUnitInfo);
       assert persistenceProvider != null;
       returnValue =
         emfs.computeIfAbsent(name,
                              n -> {
+                               final CDI<Object> cdi = CDI.current();
+                               assert cdi != null;
+                               final BeanManager beanManager = cdi.getBeanManager();
+                               assert beanManager != null;
+                               final Map<String, Object> properties = new HashMap<>();
                                properties.put("javax.persistence.bean.manager",
-                                              CDI.current().getBeanManager());
+                                              beanManager);
+                               Class<?> validatorFactoryClass = null;
+                               try {
+                                 validatorFactoryClass = Class.forName("javax.validation.ValidatorFactory");
+                               } catch (final ClassNotFoundException classNotFoundException) {
+                                 classNotFoundException.printStackTrace();
+                               }
+                               if (validatorFactoryClass != null) {
+                                 final Bean<?> validatorFactoryBean =
+                                   getValidatorFactoryBean(beanManager,
+                                                           validatorFactoryClass);
+                                 if (validatorFactoryBean != null) {
+                                   properties.put("javax.validation.ValidatorFactory",
+                                                  beanManager.getReference(validatorFactoryBean,
+                                                                           validatorFactoryClass,
+                                                                           beanManager.createCreationalContext(validatorFactoryBean)));
+                                 }
+                               }
                                return
                                  persistenceProvider.createContainerEntityManagerFactory(persistenceUnitInfo,
                                                                                          properties);
@@ -288,42 +298,15 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
       if (returnValue == null) {
         final PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(this.name);
         assert persistenceUnitInfo != null;
-        final Properties p = persistenceUnitInfo.getProperties();
-        final Map<String, Object> puProperties;
-        if (p == null) {
-          puProperties = null;
-        } else {
-          puProperties = new HashMap<>();
-          final Set<String> propertyNames = p.stringPropertyNames();
-          if (propertyNames != null && !propertyNames.isEmpty()) {
-            for (final String propertyName : propertyNames) {
-              final Object value;
-              if (p.containsKey(propertyName)) {
-                value = p.get(propertyName);
-              } else {
-                value = p.getProperty(propertyName);
-              }
-              puProperties.put(propertyName, value);
-            }
-          }
-        }
         final EntityManagerFactory emf;
         if (PersistenceUnitTransactionType.RESOURCE_LOCAL.equals(persistenceUnitInfo.getTransactionType())) {
           emf = getOrCreateEntityManagerFactory(this.emfs, null, this.name);
           assert emf != null;
-          if (puProperties == null) {
-            returnValue = emf.createEntityManager();
-          } else {
-            returnValue = emf.createEntityManager(puProperties);
-          }
+          returnValue = emf.createEntityManager();
         } else {
           emf = getOrCreateEntityManagerFactory(this.emfs, persistenceUnitInfo, this.name);
           assert emf != null;
-          if (puProperties == null) {
-            returnValue = emf.createEntityManager(this.synchronizationType);
-          } else {
-            returnValue = emf.createEntityManager(this.synchronizationType, puProperties);
-          }
+          returnValue = emf.createEntityManager(this.synchronizationType);
         }
         assert returnValue != null;
         this.em = returnValue;
@@ -339,6 +322,29 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
       }
     }
 
+  }
+
+  private static final Bean<?> getValidatorFactoryBean(final BeanManager beanManager,
+                                                       final Class<?> validatorFactoryClass) {
+    return getValidatorFactoryBean(beanManager, validatorFactoryClass, null);
+  }
+  
+  private static final Bean<?> getValidatorFactoryBean(final BeanManager beanManager,
+                                                       final Class<?> validatorFactoryClass,
+                                                       final Set<Annotation> qualifiers) {
+    Bean<?> returnValue = null;
+    if (beanManager != null && validatorFactoryClass != null) {
+      final Set<Bean<?>> beans;
+      if (qualifiers == null) {
+        beans = beanManager.getBeans(validatorFactoryClass);
+      } else {
+        beans = beanManager.getBeans(validatorFactoryClass, qualifiers.toArray(new Annotation[qualifiers.size()]));
+      }
+      if (beans != null && !beans.isEmpty()) {
+        returnValue = beanManager.resolve(beans);
+      }
+    }
+    return returnValue;
   }
 
 }
