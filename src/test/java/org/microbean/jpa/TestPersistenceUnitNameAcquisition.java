@@ -16,28 +16,20 @@
  */
 package org.microbean.jpa;
 
-
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.context.Initialized;
 
 import javax.enterprise.event.Observes;
 
-import javax.enterprise.inject.Default;
-import javax.enterprise.inject.Produces;
-
 import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Provider;
 
 import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceContext;
-
-import javax.persistence.spi.PersistenceUnitInfo;
 
 import javax.sql.DataSource;
 
 import javax.transaction.Transaction;
+import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import javax.transaction.UserTransaction;
@@ -56,6 +48,9 @@ public class TestPersistenceUnitNameAcquisition {
 
   @Inject
   private Transaction injectedTransaction;
+
+  @Inject
+  private TransactionManager tm;
   
   @PersistenceContext(unitName = "test")
   private EntityManager testEm;
@@ -77,6 +72,7 @@ public class TestPersistenceUnitNameAcquisition {
   @Transactional(TxType.REQUIRED)
   public void frobnicate() {
     System.out.println("*** frobnicating");
+    System.out.println("*** tm: " + this.tm);
     System.out.println("*** injected UserTransaction: " + this.injectedUserTransaction);
     System.out.println("*** injected transaction: " + this.injectedTransaction);
   }

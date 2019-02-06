@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2018 microBean.
+ * Copyright © 2018–2019 microBean.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ import java.lang.annotation.Annotation;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Properties;
 import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,101 +53,282 @@ import javax.persistence.spi.PersistenceUnitTransactionType;
 import org.jboss.weld.injection.spi.ResourceReference;
 import org.jboss.weld.injection.spi.ResourceReferenceFactory;
 
+/**
+ * A {@link org.jboss.weld.injection.spi.JpaInjectionServices}
+ * implementation that integrates JPA functionality into Weld-based
+ * CDI environments.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see org.jboss.weld.injection.spi.JpaInjectionServices
+ */
 public final class JpaInjectionServices implements org.jboss.weld.injection.spi.JpaInjectionServices {
 
+
+  /*
+   * Static fields.
+   */
+
+  
+  /*
+   * For unknown reasons, Weld instantiates this class three times
+   * during normal execution.  Only one of those instances is actually
+   * used to produce EntityManagers and EntityManagerFactories.  The
+   * INSTANCE and UNDERWAY fields ensure that truly only one instance
+   * processes all incoming calls.
+   *
+   * See the underway() method as well.
+   */
+
+  /**
+   * The single officially sanctioned instance of this class.
+   *
+   * <p>This field may be {@code null}.</p>
+   */
+  static volatile JpaInjectionServices INSTANCE;
+
+  private static volatile boolean UNDERWAY;
+
+
+  /*
+   * Instance fields.
+   */
+
+  
+  private final Set<EntityManager> ems;
+  
   private volatile Map<String, EntityManagerFactory> emfs;
 
+
+  /*
+   * Constructors.
+   */
+
+  
+  /**
+   * Creates a new {@link JpaInjectionServices}.
+   */
   public JpaInjectionServices() {
     super();
+    synchronized (JpaInjectionServices.class) {
+      if (INSTANCE != null && UNDERWAY) {
+        throw new IllegalStateException();
+      }
+      INSTANCE = this;
+    }
+    this.ems = ConcurrentHashMap.newKeySet();
   }
 
+  private static synchronized final void underway() {
+    assert INSTANCE != null;
+    UNDERWAY = true;
+  }
+
+  /**
+   * Called by the ({@code private}) {@code
+   * JpaInjectionServicesExtension} class when a JTA transaction is
+   * begun.
+   *
+   * <p>The Narayana CDI integration this class is often deployed with
+   * will fire such events.  These events serve as an indication that
+   * a call to {@link TransactionManager#begin()} has been made.</p>
+   *
+   * <p>{@link EntityManager}s created by this class will have their
+   * {@link EntityManager#joinTransaction()} methods called if the
+   * supplied object is non-{@code null}.</p>
+   *
+   * @param transaction an {@link Object} representing the
+   * transaction; may be {@code null} in which case no action will be
+   * taken
+   */
+  final void jtaTransactionBegun(final Object transaction) {
+    if (this != INSTANCE) {
+      INSTANCE.jtaTransactionBegun(transaction);
+    } else if (transaction != null) {
+      ems.forEach(em -> em.joinTransaction());
+    }
+  }
+
+  /**
+   * Returns a {@link ResourceReferenceFactory} whose {@link
+   * ResourceReferenceFactory#createResource()} method will be invoked
+   * appropriately by Weld later.
+   *
+   * <p>This method never returns {@code null}.</p>
+   *
+   * @param the {@link InjectionPoint} annotated with {@link
+   * PersistenceContext}; must not be {@code null}
+   *
+   * @return a non-{@code null} {@link ResourceReferenceFactory} whose
+   * {@link ResourceReferenceFactory#createResource()} method will
+   * create {@link EntityManager} instances
+   *
+   * @exception NullPointerException if {@code injectionPoint} is
+   * {@code null}
+   *
+   * @see ResourceReferenceFactory#createResource()
+   */
   @Override
   public final ResourceReferenceFactory<EntityManager> registerPersistenceContextInjectionPoint(final InjectionPoint injectionPoint) {
-    Objects.requireNonNull(injectionPoint);
-    final Annotated annotatedMember = injectionPoint.getAnnotated();
-    assert annotatedMember != null;
-    final PersistenceContext persistenceContextAnnotation = annotatedMember.getAnnotation(PersistenceContext.class);
-    if (persistenceContextAnnotation == null) {
-      throw new IllegalArgumentException("injectionPoint.getAnnotated().getAnnotation(PersistenceContext.class) == null");
-    }
-    final String name;
-    final String n = persistenceContextAnnotation.unitName();
-    if (n.isEmpty()) {
-      if (annotatedMember instanceof AnnotatedField) {
-        name = ((AnnotatedField<?>)annotatedMember).getJavaMember().getName();
+    underway();
+    final ResourceReferenceFactory<EntityManager> returnValue;
+    if (this != INSTANCE) {
+      returnValue = INSTANCE.registerPersistenceContextInjectionPoint(injectionPoint);
+    } else {
+      Objects.requireNonNull(injectionPoint);
+      final Annotated annotatedMember = injectionPoint.getAnnotated();
+      assert annotatedMember != null;
+      final PersistenceContext persistenceContextAnnotation = annotatedMember.getAnnotation(PersistenceContext.class);
+      if (persistenceContextAnnotation == null) {
+        throw new IllegalArgumentException("injectionPoint.getAnnotated().getAnnotation(PersistenceContext.class) == null");
+      }
+      final String name;
+      final String n = persistenceContextAnnotation.unitName();
+      if (n.isEmpty()) {
+        if (annotatedMember instanceof AnnotatedField) {
+          name = ((AnnotatedField<?>)annotatedMember).getJavaMember().getName();
+        } else {
+          name = n;
+        }
       } else {
         name = n;
       }
-    } else {
-      name = n;
-    }
-    final SynchronizationType synchronizationType = persistenceContextAnnotation.synchronization();
-    assert synchronizationType != null;    
-    synchronized (this) {
-      if (this.emfs == null) {
-        this.emfs = new ConcurrentHashMap<>();
+      final SynchronizationType synchronizationType = persistenceContextAnnotation.synchronization();
+      assert synchronizationType != null;    
+      synchronized (this) {
+        if (this.emfs == null) {
+          this.emfs = new ConcurrentHashMap<>();
+        }
       }
+      returnValue = () -> new EntityManagerResourceReference(name, synchronizationType);
     }
-    return () -> new EntityManagerResourceReference(this.emfs, name, synchronizationType);
+    return returnValue;
   }
 
+  /**
+   * Returns a {@link ResourceReferenceFactory} whose {@link
+   * ResourceReferenceFactory#createResource()} method will be invoked
+   * appropriately by Weld later.
+   *
+   * <p>This method never returns {@code null}.</p>
+   *
+   * @param the {@link InjectionPoint} annotated with {@link
+   * PersistenceUnit}; must not be {@code null}
+   *
+   * @return a non-{@code null} {@link ResourceReferenceFactory} whose
+   * {@link ResourceReferenceFactory#createResource()} method will
+   * create {@link EntityManagerFactory} instances
+   *
+   * @exception NullPointerException if {@code injectionPoint} is
+   * {@code null}
+   *
+   * @see ResourceReferenceFactory#createResource()
+   */
   @Override
   public final ResourceReferenceFactory<EntityManagerFactory> registerPersistenceUnitInjectionPoint(final InjectionPoint injectionPoint) {
-    Objects.requireNonNull(injectionPoint);
-    final Annotated annotatedMember = injectionPoint.getAnnotated();
-    assert annotatedMember != null;
-    final PersistenceUnit persistenceUnitAnnotation = annotatedMember.getAnnotation(PersistenceUnit.class);
-    if (persistenceUnitAnnotation == null) {
-      throw new IllegalArgumentException("injectionPoint.getAnnotated().getAnnotation(PersistenceUnit.class) == null");
-    }
-    final String name;
-    final String n = persistenceUnitAnnotation.unitName();
-    if (n.isEmpty()) {
-      if (annotatedMember instanceof AnnotatedField) {
-        name = ((AnnotatedField<?>)annotatedMember).getJavaMember().getName();
+    underway();
+    final ResourceReferenceFactory<EntityManagerFactory> returnValue;
+    if (this != INSTANCE) {
+      returnValue = INSTANCE.registerPersistenceUnitInjectionPoint(injectionPoint);
+    } else {
+      Objects.requireNonNull(injectionPoint);
+      final Annotated annotatedMember = injectionPoint.getAnnotated();
+      assert annotatedMember != null;
+      final PersistenceUnit persistenceUnitAnnotation = annotatedMember.getAnnotation(PersistenceUnit.class);
+      if (persistenceUnitAnnotation == null) {
+        throw new IllegalArgumentException("injectionPoint.getAnnotated().getAnnotation(PersistenceUnit.class) == null");
+      }
+      final String name;
+      final String n = persistenceUnitAnnotation.unitName();
+      if (n.isEmpty()) {
+        if (annotatedMember instanceof AnnotatedField) {
+          name = ((AnnotatedField<?>)annotatedMember).getJavaMember().getName();
+        } else {
+          name = n;
+        }
       } else {
         name = n;
       }
-    } else {
-      name = n;
-    }
-    synchronized (this) {
-      if (this.emfs == null) {
-        this.emfs = new ConcurrentHashMap<>();
+      synchronized (this) {
+        if (this.emfs == null) {
+          this.emfs = new ConcurrentHashMap<>();
+        }
       }
+      returnValue = () -> new EntityManagerFactoryResourceReference(this.emfs, name);
     }
-    return () -> new EntityManagerFactoryResourceReference(this.emfs, name);
+    return returnValue;
   }
 
+  /**
+   * Invoked by Weld automatically to clean up any resources held by
+   * this class.
+   */
   @Override
   public final void cleanup() {
-    final Map<? extends String, ? extends EntityManagerFactory> emfs = this.emfs;
-    if (emfs != null && !emfs.isEmpty()) {
-      final Collection<? extends Entry<? extends String, ? extends EntityManagerFactory>> entries = emfs.entrySet();
-      assert entries != null;
-      assert !entries.isEmpty();
-      final Iterator<? extends Entry<? extends String, ? extends EntityManagerFactory>> iterator = entries.iterator();
-      assert iterator != null;
-      assert iterator.hasNext();
-      while (iterator.hasNext()) {
-        final Entry<? extends String, ? extends EntityManagerFactory> entry = iterator.next();
-        assert entry != null;
-        final EntityManagerFactory emf = entry.getValue();
-        assert emf != null;
-        if (emf.isOpen()) {
-          emf.close();
+    underway();
+    if (this != INSTANCE) {
+      INSTANCE.cleanup();
+    } else {
+      ems.clear();
+      final Map<? extends String, ? extends EntityManagerFactory> emfs = this.emfs;
+      if (emfs != null && !emfs.isEmpty()) {
+        final Collection<? extends Entry<? extends String, ? extends EntityManagerFactory>> entries = emfs.entrySet();
+        assert entries != null;
+        assert !entries.isEmpty();
+        final Iterator<? extends Entry<? extends String, ? extends EntityManagerFactory>> iterator = entries.iterator();
+        assert iterator != null;
+        assert iterator.hasNext();
+        while (iterator.hasNext()) {
+          final Entry<? extends String, ? extends EntityManagerFactory> entry = iterator.next();
+          assert entry != null;
+          final EntityManagerFactory emf = entry.getValue();
+          assert emf != null;
+          if (emf.isOpen()) {
+            emf.close();
+          }
+          iterator.remove();
         }
-        iterator.remove();
       }
     }
   }
-  
+
+  /**
+   * Calls the {@link
+   * #registerPersistenceContextInjectionPoint(InjectionPoint)} method
+   * and invokes {@link ResourceReference#getInstance()} on its return
+   * value and returns the result.
+   *
+   * <p>This method never returns {@code null}.</p>
+   *
+   * @param injectionPoint an {@link InjectionPoint} annotated with
+   * {@link PersistenceContext}; must not be {@code null}
+   *
+   * @return a non-{@code null} {@link EntityManager}
+   *
+   * @see #registerPersistenceContextInjectionPoint(InjectionPoint)
+   */
   @Deprecated
   @Override
   public final EntityManager resolvePersistenceContext(final InjectionPoint injectionPoint) {
     return this.registerPersistenceContextInjectionPoint(injectionPoint).createResource().getInstance();
   }
 
+  /**
+   * Calls the {@link
+   * #registerPersistenceUnitInjectionPoint(InjectionPoint)} method
+   * and invokes {@link ResourceReference#getInstance()} on its return
+   * value and returns the result.
+   *
+   * <p>This method never returns {@code null}.</p>
+   *
+   * @param injectionPoint an {@link InjectionPoint} annotated with
+   * {@link PersistenceUnit}; must not be {@code null}
+   *
+   * @return a non-{@code null} {@link EntityManagerFactory}
+   *
+   * @see #registerPersistenceUnitInjectionPoint(InjectionPoint)
+   */
   @Deprecated
   @Override
   public final EntityManagerFactory resolvePersistenceUnit(final InjectionPoint injectionPoint) {
@@ -273,9 +454,7 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
     }
   }
 
-  private static final class EntityManagerResourceReference implements ResourceReference<EntityManager> {
-
-    private final Map<String, EntityManagerFactory> emfs;
+  private final class EntityManagerResourceReference implements ResourceReference<EntityManager> {
 
     private final String name;
 
@@ -283,33 +462,33 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
 
     private volatile EntityManager em;
 
-    private EntityManagerResourceReference(final Map<String, EntityManagerFactory> emfs,
-                                           final String name,
+    private EntityManagerResourceReference(final String name,
                                            final SynchronizationType synchronizationType) {
       super();
-      this.emfs = Objects.requireNonNull(emfs);
       this.name = Objects.requireNonNull(name);
       this.synchronizationType = Objects.requireNonNull(synchronizationType);
     }
 
     @Override
     public final EntityManager getInstance() {
-      EntityManager returnValue = this.em;
+      EntityManager returnValue = this.em; // atomic assignment
       if (returnValue == null) {
         final PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(this.name);
         assert persistenceUnitInfo != null;
         final EntityManagerFactory emf;
         if (PersistenceUnitTransactionType.RESOURCE_LOCAL.equals(persistenceUnitInfo.getTransactionType())) {
-          emf = getOrCreateEntityManagerFactory(this.emfs, null, this.name);
+          emf = getOrCreateEntityManagerFactory(emfs, null, this.name);
           assert emf != null;
           returnValue = emf.createEntityManager();
         } else {
-          emf = getOrCreateEntityManagerFactory(this.emfs, persistenceUnitInfo, this.name);
+          // JTA is in effect
+          emf = getOrCreateEntityManagerFactory(emfs, persistenceUnitInfo, this.name);
           assert emf != null;
           returnValue = emf.createEntityManager(this.synchronizationType);
         }
         assert returnValue != null;
         this.em = returnValue;
+        ems.add(returnValue);
       }
       return returnValue;
     }
