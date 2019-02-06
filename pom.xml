@@ -253,6 +253,14 @@
       <scope>compile</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.microbean</groupId>
+      <artifactId>microbean-development-annotations</artifactId>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>
+
+    
   </dependencies>
   
   <build>

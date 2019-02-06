@@ -53,6 +53,8 @@ import javax.persistence.spi.PersistenceUnitTransactionType;
 import org.jboss.weld.injection.spi.ResourceReference;
 import org.jboss.weld.injection.spi.ResourceReferenceFactory;
 
+import org.microbean.development.annotation.Issue;
+
 /**
  * A {@link org.jboss.weld.injection.spi.JpaInjectionServices}
  * implementation that integrates JPA functionality into Weld-based
@@ -63,6 +65,7 @@ import org.jboss.weld.injection.spi.ResourceReferenceFactory;
  *
  * @see org.jboss.weld.injection.spi.JpaInjectionServices
  */
+@Issue(id = "WELD-2563", uri = "https://issues.jboss.org/browse/WELD-2563")
 public final class JpaInjectionServices implements org.jboss.weld.injection.spi.JpaInjectionServices {
 
 
@@ -72,11 +75,12 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
 
   
   /*
-   * For unknown reasons, Weld instantiates this class three times
-   * during normal execution.  Only one of those instances is actually
-   * used to produce EntityManagers and EntityManagerFactories.  The
-   * INSTANCE and UNDERWAY fields ensure that truly only one instance
-   * processes all incoming calls.
+   * Weld instantiates this class three times during normal execution
+   * (see https://issues.jboss.org/browse/WELD-2563 for details).
+   * Only one of those instances (the first, I think) is actually used
+   * to produce EntityManagers and EntityManagerFactories; the other
+   * two are discarded.  The static INSTANCE and UNDERWAY fields
+   * ensure that truly only one instance processes all incoming calls.
    *
    * See the underway() method as well.
    */
@@ -86,8 +90,10 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
    *
    * <p>This field may be {@code null}.</p>
    */
+  @Issue(id = "WELD_2563", uri = "https://issues.jboss.org/browse/WELD-2563")
   static volatile JpaInjectionServices INSTANCE;
 
+  @Issue(id = "WELD_2563", uri = "https://issues.jboss.org/browse/WELD-2563")
   private static volatile boolean UNDERWAY;
 
 
@@ -120,6 +126,7 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
     this.ems = ConcurrentHashMap.newKeySet();
   }
 
+  @Issue(id = "WELD_2563", uri = "https://issues.jboss.org/browse/WELD-2563")
   private static synchronized final void underway() {
     assert INSTANCE != null;
     UNDERWAY = true;
