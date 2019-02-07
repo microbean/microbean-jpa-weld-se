@@ -28,6 +28,11 @@ import java.util.Objects;
 import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+
+import java.util.function.Supplier;
 
 import javax.enterprise.inject.literal.NamedLiteral;
 
@@ -50,10 +55,15 @@ import javax.persistence.spi.PersistenceProvider;
 import javax.persistence.spi.PersistenceUnitInfo;
 import javax.persistence.spi.PersistenceUnitTransactionType;
 
+import org.jboss.weld.manager.api.ExecutorServices;
+import org.jboss.weld.manager.api.WeldManager;
+
 import org.jboss.weld.injection.spi.ResourceReference;
 import org.jboss.weld.injection.spi.ResourceReferenceFactory;
 
 import org.microbean.development.annotation.Issue;
+
+import static javax.persistence.spi.PersistenceUnitTransactionType.RESOURCE_LOCAL;
 
 /**
  * A {@link org.jboss.weld.injection.spi.JpaInjectionServices}
@@ -380,9 +390,7 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
     final EntityManagerFactory returnValue;
     if (persistenceUnitInfo == null) {
       returnValue =
-        emfs.computeIfAbsent(name,
-                             n -> Persistence.createEntityManagerFactory(n));
-
+        emfs.computeIfAbsent(name, n -> Persistence.createEntityManagerFactory(n));
     } else {
       final PersistenceProvider persistenceProvider = getPersistenceProvider(persistenceUnitInfo);
       assert persistenceProvider != null;
@@ -433,22 +441,24 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
 
     private final String name;
 
+    private final PersistenceUnitInfo persistenceUnitInfo;
+
     private EntityManagerFactoryResourceReference(final Map<String, EntityManagerFactory> emfs,
                                                   final String name) {
       super();
       this.emfs = Objects.requireNonNull(emfs);
       this.name = Objects.requireNonNull(name);
+      this.persistenceUnitInfo = getPersistenceUnitInfo(name);
+      assert this.persistenceUnitInfo != null;
     }
 
     @Override
     public final EntityManagerFactory getInstance() {
-      final PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(this.name);
-      assert persistenceUnitInfo != null;
       final EntityManagerFactory returnValue;
-      if (PersistenceUnitTransactionType.RESOURCE_LOCAL.equals(persistenceUnitInfo.getTransactionType())) {
-        returnValue = getOrCreateEntityManagerFactory(emfs, null, name);
+      if (RESOURCE_LOCAL.equals(persistenceUnitInfo.getTransactionType())) {
+        returnValue = getOrCreateEntityManagerFactory(emfs, null, this.name);
       } else {
-        returnValue = getOrCreateEntityManagerFactory(emfs, persistenceUnitInfo, name);
+        returnValue = getOrCreateEntityManagerFactory(emfs, this.persistenceUnitInfo, this.name);
       }
       return returnValue;
     }
@@ -468,38 +478,77 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
 
     private final SynchronizationType synchronizationType;
 
+    private final PersistenceUnitInfo persistenceUnitInfo;
+
     // @GuardedBy("this")
     private EntityManager em;
 
+    private final Future<EntityManagerFactory> emfFuture;
+    
+    private final Supplier<EntityManager> emSupplier;
+    
     private EntityManagerResourceReference(final String name,
                                            final SynchronizationType synchronizationType) {
       super();
       this.name = Objects.requireNonNull(name);
       this.synchronizationType = Objects.requireNonNull(synchronizationType);
+      this.persistenceUnitInfo = getPersistenceUnitInfo(name);
+      assert this.persistenceUnitInfo != null;
+      final ExecutorService taskExecutorService = ((WeldManager)CDI.current().getBeanManager()).getServices().get(ExecutorServices.class).getTaskExecutor();
+      assert taskExecutorService != null;
+      if (this.isResourceLocal()) {
+        // Kick off the lengthy process of setting up an
+        // EntityManagerFactory in the background with the optimistic
+        // assumption, possibly incorrect, that someone will call
+        // getInstance() at some point.
+        this.emfFuture = taskExecutorService.submit(() -> {
+            return getOrCreateEntityManagerFactory(emfs, null, this.name);
+          });
+        this.emSupplier = () -> {
+          try {
+            return emfFuture.get().createEntityManager();
+          } catch (final ExecutionException executionException) {
+            throw new RuntimeException(executionException.getMessage(), executionException);
+          } catch (final InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(interruptedException.getMessage(), interruptedException);
+          }
+        };
+      } else {
+        // Kick off the lengthy process of setting up an
+        // EntityManagerFactory in the background with the optimistic
+        // assumption, possibly incorrect, that someone will call
+        // getInstance() at some point.
+        this.emfFuture = taskExecutorService.submit(() -> {
+            return getOrCreateEntityManagerFactory(emfs, this.persistenceUnitInfo, this.name);
+          });
+        this.emSupplier = () -> {
+          try {
+            final EntityManager em = emfFuture.get().createEntityManager(this.synchronizationType);
+            ems.add(em);
+            return em;
+          } catch (final ExecutionException executionException) {
+            throw new RuntimeException(executionException.getMessage(), executionException);
+          } catch (final InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(interruptedException.getMessage(), interruptedException);
+          }
+        };
+      }
+
+
+    }
+
+    private final boolean isResourceLocal() {
+      return RESOURCE_LOCAL.equals(this.persistenceUnitInfo.getTransactionType());
     }
 
     @Override
     public synchronized final EntityManager getInstance() {
-      EntityManager returnValue = this.em;
-      if (returnValue == null) {
-        final PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(this.name);
-        assert persistenceUnitInfo != null;
-        final EntityManagerFactory emf;
-        if (PersistenceUnitTransactionType.RESOURCE_LOCAL.equals(persistenceUnitInfo.getTransactionType())) {
-          emf = getOrCreateEntityManagerFactory(emfs, null, this.name);
-          assert emf != null;
-          returnValue = emf.createEntityManager();
-        } else {
-          // JTA
-          emf = getOrCreateEntityManagerFactory(emfs, persistenceUnitInfo, this.name);
-          assert emf != null;
-          returnValue = emf.createEntityManager(this.synchronizationType);
-          ems.add(returnValue);
-        }
-        assert returnValue != null;
-        this.em = returnValue;
+      if (this.em == null) {
+        this.em = this.emSupplier.get();
       }
-      return returnValue;
+      return this.em;
     }
 
     @Override
@@ -515,9 +564,13 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
         }
         ems.remove(em);        
       }
+      if (!this.emfFuture.isDone()) {
+        this.emfFuture.cancel(true);
+      }
     }
-
+    
   }
+  
 
   private static final Bean<?> getValidatorFactoryBean(final BeanManager beanManager,
                                                        final Class<?> validatorFactoryClass) {

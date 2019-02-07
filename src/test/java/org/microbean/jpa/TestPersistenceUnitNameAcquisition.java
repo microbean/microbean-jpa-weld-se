@@ -37,6 +37,7 @@ import javax.transaction.UserTransaction;
 import org.junit.Test;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import static org.microbean.main.Main.main;
 
@@ -71,10 +72,11 @@ public class TestPersistenceUnitNameAcquisition {
 
   @Transactional(TxType.REQUIRED)
   public void frobnicate() {
-    System.out.println("*** frobnicating");
-    System.out.println("*** tm: " + this.tm);
-    System.out.println("*** injected UserTransaction: " + this.injectedUserTransaction);
-    System.out.println("*** injected transaction: " + this.injectedTransaction);
+    assertNotNull(this.testEm);
+    assertTrue(this.testEm.isJoinedToTransaction()); // JTA works
+    assertNotNull(this.tm);
+    assertNotNull(this.injectedUserTransaction);
+    assertNotNull(this.injectedTransaction);
   }
 
   @Test
