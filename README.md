@@ -46,3 +46,16 @@ variant](https://github.com/microbean/microbean-narayana-jta-weld-se)
 and the [microBean DataSource CDI HikariCP
 Extension](https://microbean.github.io/microbean-datasource-cdi-hikaricp/).
 
+When you put all these components on your classpath, then any
+`EntityManager` injected by being annotated with
+[`@PersistenceContext`](https://javaee.github.io/javaee-spec/javadocs/javax/persistence/PersistenceContext.html)
+that is involved in the execution of any method annotated with
+[`@Transactional`](https://javaee.github.io/javaee-spec/javadocs/javax/transaction/Transactional.html)
+will automatically join an automatically-created JTA `Transaction`,
+managed by the [Narayana transaction engine](http://narayana.io/).
+The result is EJB-like behavior without an EJB container or
+application server.
+
+If you have an implementation of [Bean
+Validation](https://beanvalidation.org/) on your classpath, then it
+will be incorporated into this project's overall JPA support as well.
