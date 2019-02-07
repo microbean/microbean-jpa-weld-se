@@ -103,7 +103,8 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
 
   
   private final Set<EntityManager> ems;
-  
+
+  // @GuardedBy("this")
   private volatile Map<String, EntityManagerFactory> emfs;
 
 
@@ -467,7 +468,8 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
 
     private final SynchronizationType synchronizationType;
 
-    private volatile EntityManager em;
+    // @GuardedBy("this")
+    private EntityManager em;
 
     private EntityManagerResourceReference(final String name,
                                            final SynchronizationType synchronizationType) {
@@ -477,8 +479,8 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
     }
 
     @Override
-    public final EntityManager getInstance() {
-      EntityManager returnValue = this.em; // atomic assignment
+    public synchronized final EntityManager getInstance() {
+      EntityManager returnValue = this.em;
       if (returnValue == null) {
         final PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(this.name);
         assert persistenceUnitInfo != null;
@@ -488,23 +490,30 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
           assert emf != null;
           returnValue = emf.createEntityManager();
         } else {
-          // JTA is in effect
+          // JTA
           emf = getOrCreateEntityManagerFactory(emfs, persistenceUnitInfo, this.name);
           assert emf != null;
           returnValue = emf.createEntityManager(this.synchronizationType);
+          ems.add(returnValue);
         }
         assert returnValue != null;
         this.em = returnValue;
-        ems.add(returnValue);
       }
       return returnValue;
     }
 
     @Override
     public final void release() {
-      final EntityManager em = this.em;
-      if (em != null && em.isOpen()) {
-        em.close();
+      final EntityManager em;
+      synchronized (this) {
+        em = this.em;
+        this.em = null;
+      }
+      if (em != null) {
+        if (em.isOpen()) {
+          em.close();
+        }
+        ems.remove(em);        
       }
     }
 
