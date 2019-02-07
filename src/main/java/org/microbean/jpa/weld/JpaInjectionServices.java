@@ -83,14 +83,17 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
    * Static fields.
    */
 
-  
+
   /*
    * Weld instantiates this class three times during normal execution
    * (see https://issues.jboss.org/browse/WELD-2563 for details).
-   * Only one of those instances (the first, I think) is actually used
-   * to produce EntityManagers and EntityManagerFactories; the other
-   * two are discarded.  The static INSTANCE and UNDERWAY fields
-   * ensure that truly only one instance processes all incoming calls.
+   * Only one of those instances (the first) is actually used to
+   * produce EntityManagers and EntityManagerFactories; the other two
+   * are discarded.  The static INSTANCE and UNDERWAY fields ensure
+   * that truly only one instance processes all incoming calls, and
+   * that it is the one that is actually tracked and stored by Weld
+   * itself in the return value of the WeldManager#getServices()
+   * method.
    *
    * See the underway() method as well.
    */
@@ -111,7 +114,7 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
    * Instance fields.
    */
 
-  
+
   private final Set<EntityManager> ems;
 
   // @GuardedBy("this")
@@ -122,24 +125,28 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
    * Constructors.
    */
 
-  
+
   /**
    * Creates a new {@link JpaInjectionServices}.
    */
   public JpaInjectionServices() {
     super();
     synchronized (JpaInjectionServices.class) {
-      if (INSTANCE != null && UNDERWAY) {
+      // See https://issues.jboss.org/browse/WELD-2563.  Make sure
+      // only the first instance is "kept" as it's the one tracked by
+      // WeldManager's ServiceRegistry.  The others are discarded.
+      if (INSTANCE == null) {
+        assert !UNDERWAY;
+        INSTANCE = this;
+      } else if (UNDERWAY) {
         throw new IllegalStateException();
       }
-      INSTANCE = this;
     }
     this.ems = ConcurrentHashMap.newKeySet();
   }
 
   @Issue(id = "WELD_2563", uri = "https://issues.jboss.org/browse/WELD-2563")
   private static synchronized final void underway() {
-    assert INSTANCE != null;
     UNDERWAY = true;
   }
 
@@ -161,11 +168,8 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
    * taken
    */
   final void jtaTransactionBegun(final Object transaction) {
-    if (this != INSTANCE) {
-      INSTANCE.jtaTransactionBegun(transaction);
-    } else if (transaction != null) {
-      ems.forEach(em -> em.joinTransaction());
-    }
+    assert this == INSTANCE;
+    this.ems.forEach(em -> em.joinTransaction());
   }
 
   /**
@@ -190,37 +194,34 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
   @Override
   public final ResourceReferenceFactory<EntityManager> registerPersistenceContextInjectionPoint(final InjectionPoint injectionPoint) {
     underway();
+    assert this == INSTANCE;
     final ResourceReferenceFactory<EntityManager> returnValue;
-    if (this != INSTANCE) {
-      returnValue = INSTANCE.registerPersistenceContextInjectionPoint(injectionPoint);
-    } else {
-      Objects.requireNonNull(injectionPoint);
-      final Annotated annotatedMember = injectionPoint.getAnnotated();
-      assert annotatedMember != null;
-      final PersistenceContext persistenceContextAnnotation = annotatedMember.getAnnotation(PersistenceContext.class);
-      if (persistenceContextAnnotation == null) {
-        throw new IllegalArgumentException("injectionPoint.getAnnotated().getAnnotation(PersistenceContext.class) == null");
-      }
-      final String name;
-      final String n = persistenceContextAnnotation.unitName();
-      if (n.isEmpty()) {
-        if (annotatedMember instanceof AnnotatedField) {
-          name = ((AnnotatedField<?>)annotatedMember).getJavaMember().getName();
-        } else {
-          name = n;
-        }
+    Objects.requireNonNull(injectionPoint);
+    final Annotated annotatedMember = injectionPoint.getAnnotated();
+    assert annotatedMember != null;
+    final PersistenceContext persistenceContextAnnotation = annotatedMember.getAnnotation(PersistenceContext.class);
+    if (persistenceContextAnnotation == null) {
+      throw new IllegalArgumentException("injectionPoint.getAnnotated().getAnnotation(PersistenceContext.class) == null");
+    }
+    final String name;
+    final String n = persistenceContextAnnotation.unitName();
+    if (n.isEmpty()) {
+      if (annotatedMember instanceof AnnotatedField) {
+        name = ((AnnotatedField<?>)annotatedMember).getJavaMember().getName();
       } else {
         name = n;
       }
-      final SynchronizationType synchronizationType = persistenceContextAnnotation.synchronization();
-      assert synchronizationType != null;    
-      synchronized (this) {
-        if (this.emfs == null) {
-          this.emfs = new ConcurrentHashMap<>();
-        }
-      }
-      returnValue = () -> new EntityManagerResourceReference(name, synchronizationType);
+    } else {
+      name = n;
     }
+    final SynchronizationType synchronizationType = persistenceContextAnnotation.synchronization();
+    assert synchronizationType != null;
+    synchronized (this) {
+      if (this.emfs == null) {
+        this.emfs = new ConcurrentHashMap<>();
+      }
+    }
+    returnValue = () -> new EntityManagerResourceReference(name, synchronizationType);
     return returnValue;
   }
 
@@ -246,35 +247,32 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
   @Override
   public final ResourceReferenceFactory<EntityManagerFactory> registerPersistenceUnitInjectionPoint(final InjectionPoint injectionPoint) {
     underway();
+    assert this == INSTANCE;
     final ResourceReferenceFactory<EntityManagerFactory> returnValue;
-    if (this != INSTANCE) {
-      returnValue = INSTANCE.registerPersistenceUnitInjectionPoint(injectionPoint);
-    } else {
-      Objects.requireNonNull(injectionPoint);
-      final Annotated annotatedMember = injectionPoint.getAnnotated();
-      assert annotatedMember != null;
-      final PersistenceUnit persistenceUnitAnnotation = annotatedMember.getAnnotation(PersistenceUnit.class);
-      if (persistenceUnitAnnotation == null) {
-        throw new IllegalArgumentException("injectionPoint.getAnnotated().getAnnotation(PersistenceUnit.class) == null");
-      }
-      final String name;
-      final String n = persistenceUnitAnnotation.unitName();
-      if (n.isEmpty()) {
-        if (annotatedMember instanceof AnnotatedField) {
-          name = ((AnnotatedField<?>)annotatedMember).getJavaMember().getName();
-        } else {
-          name = n;
-        }
+    Objects.requireNonNull(injectionPoint);
+    final Annotated annotatedMember = injectionPoint.getAnnotated();
+    assert annotatedMember != null;
+    final PersistenceUnit persistenceUnitAnnotation = annotatedMember.getAnnotation(PersistenceUnit.class);
+    if (persistenceUnitAnnotation == null) {
+      throw new IllegalArgumentException("injectionPoint.getAnnotated().getAnnotation(PersistenceUnit.class) == null");
+    }
+    final String name;
+    final String n = persistenceUnitAnnotation.unitName();
+    if (n.isEmpty()) {
+      if (annotatedMember instanceof AnnotatedField) {
+        name = ((AnnotatedField<?>)annotatedMember).getJavaMember().getName();
       } else {
         name = n;
       }
-      synchronized (this) {
-        if (this.emfs == null) {
-          this.emfs = new ConcurrentHashMap<>();
-        }
-      }
-      returnValue = () -> new EntityManagerFactoryResourceReference(this.emfs, name);
+    } else {
+      name = n;
     }
+    synchronized (this) {
+      if (this.emfs == null) {
+        this.emfs = new ConcurrentHashMap<>();
+      }
+    }
+    returnValue = () -> new EntityManagerFactoryResourceReference(this.emfs, name);
     return returnValue;
   }
 
@@ -284,23 +282,37 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
    */
   @Override
   public final void cleanup() {
-    underway();
-    if (this != INSTANCE) {
-      INSTANCE.cleanup();
-    } else {
-      ems.clear();
+    // cleanup() can get invoked multiple times at will by Weld.
+    // Specifically, the same Service instance can be stored in
+    // multiple BeanManagerImpls, and each one can call its cleanup()
+    // method, so it must be idempotent.
+    //
+    // See
+    // https://github.com/weld/core/blob/06fcaf4a6f625f101be5804208c1eb3a32884773/impl/src/main/java/org/jboss/weld/Container.java#L143-L145
+    // and
+    // https://github.com/weld/core/blob/06fcaf4a6f625f101be5804208c1eb3a32884773/impl/src/main/java/org/jboss/weld/manager/BeanManagerImpl.java#L1173.
+    if (UNDERWAY) {
+      assert this == INSTANCE;
+
+      // this.ems should be empty already.  If for some reason it is
+      // not, we just clear() it (rather than, say, calling em.close()
+      // on each element).  This is for two reasons: one, we're being
+      // cleaned up so the whole container is going down anyway.  Two,
+      // it is forbidden by JPA's contract to call close() on a
+      // container-managed EntityManager...which is the only kind of
+      // EntityManager placed in this collection.
+      this.ems.clear();
+
       final Map<? extends String, ? extends EntityManagerFactory> emfs = this.emfs;
       if (emfs != null && !emfs.isEmpty()) {
-        final Collection<? extends Entry<? extends String, ? extends EntityManagerFactory>> entries = emfs.entrySet();
-        assert entries != null;
-        assert !entries.isEmpty();
-        final Iterator<? extends Entry<? extends String, ? extends EntityManagerFactory>> iterator = entries.iterator();
+        final Collection<? extends EntityManagerFactory> values = emfs.values();
+        assert values != null;
+        assert !values.isEmpty();
+        final Iterator<? extends EntityManagerFactory> iterator = values.iterator();
         assert iterator != null;
         assert iterator.hasNext();
         while (iterator.hasNext()) {
-          final Entry<? extends String, ? extends EntityManagerFactory> entry = iterator.next();
-          assert entry != null;
-          final EntityManagerFactory emf = entry.getValue();
+          final EntityManagerFactory emf = iterator.next();
           assert emf != null;
           if (emf.isOpen()) {
             emf.close();
@@ -308,6 +320,12 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
           iterator.remove();
         }
       }
+    }
+    assert this.ems.isEmpty();
+    assert this.emfs == null || this.emfs.isEmpty();
+    synchronized (JpaInjectionServices.class) {
+      UNDERWAY = false;
+      INSTANCE = null;
     }
   }
 
@@ -352,13 +370,13 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
   public final EntityManagerFactory resolvePersistenceUnit(final InjectionPoint injectionPoint) {
     return this.registerPersistenceUnitInjectionPoint(injectionPoint).createResource().getInstance();
   }
-  
+
 
   /*
    * Static methods.
    */
 
-  
+
   private static final PersistenceProvider getPersistenceProvider(final PersistenceUnitInfo persistenceUnitInfo) {
     final String providerClassName = Objects.requireNonNull(persistenceUnitInfo).getPersistenceProviderClassName();
     final PersistenceProvider persistenceProvider;
@@ -429,6 +447,29 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
     return returnValue;
   }
 
+  private static final Bean<?> getValidatorFactoryBean(final BeanManager beanManager,
+                                                       final Class<?> validatorFactoryClass) {
+    return getValidatorFactoryBean(beanManager, validatorFactoryClass, null);
+  }
+
+  private static final Bean<?> getValidatorFactoryBean(final BeanManager beanManager,
+                                                       final Class<?> validatorFactoryClass,
+                                                       final Set<Annotation> qualifiers) {
+    Bean<?> returnValue = null;
+    if (beanManager != null && validatorFactoryClass != null) {
+      final Set<Bean<?>> beans;
+      if (qualifiers == null) {
+        beans = beanManager.getBeans(validatorFactoryClass);
+      } else {
+        beans = beanManager.getBeans(validatorFactoryClass, qualifiers.toArray(new Annotation[qualifiers.size()]));
+      }
+      if (beans != null && !beans.isEmpty()) {
+        returnValue = beanManager.resolve(beans);
+      }
+    }
+    return returnValue;
+  }
+
 
   /*
    * Inner and nested classes.
@@ -484,9 +525,9 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
     private EntityManager em;
 
     private final Future<EntityManagerFactory> emfFuture;
-    
+
     private final Supplier<EntityManager> emSupplier;
-    
+
     private EntityManagerResourceReference(final String name,
                                            final SynchronizationType synchronizationType) {
       super();
@@ -525,7 +566,7 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
         this.emSupplier = () -> {
           try {
             final EntityManager em = emfFuture.get().createEntityManager(this.synchronizationType);
-            ems.add(em);
+            JpaInjectionServices.this.ems.add(em);
             return em;
           } catch (final ExecutionException executionException) {
             throw new RuntimeException(executionException.getMessage(), executionException);
@@ -559,40 +600,20 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
         this.em = null;
       }
       if (em != null) {
-        if (em.isOpen()) {
+        if (em.isOpen() && this.isResourceLocal()) {
+          // Note that according to the javadocs on
+          // EntityManager#close(), you're never supposed to call
+          // EntityManager#close() on a container-managed
+          // EntityManager; hence the isResourceLocal() check here.
           em.close();
         }
-        ems.remove(em);        
+        JpaInjectionServices.this.ems.remove(em);
       }
       if (!this.emfFuture.isDone()) {
         this.emfFuture.cancel(true);
       }
     }
-    
-  }
-  
 
-  private static final Bean<?> getValidatorFactoryBean(final BeanManager beanManager,
-                                                       final Class<?> validatorFactoryClass) {
-    return getValidatorFactoryBean(beanManager, validatorFactoryClass, null);
-  }
-  
-  private static final Bean<?> getValidatorFactoryBean(final BeanManager beanManager,
-                                                       final Class<?> validatorFactoryClass,
-                                                       final Set<Annotation> qualifiers) {
-    Bean<?> returnValue = null;
-    if (beanManager != null && validatorFactoryClass != null) {
-      final Set<Bean<?>> beans;
-      if (qualifiers == null) {
-        beans = beanManager.getBeans(validatorFactoryClass);
-      } else {
-        beans = beanManager.getBeans(validatorFactoryClass, qualifiers.toArray(new Annotation[qualifiers.size()]));
-      }
-      if (beans != null && !beans.isEmpty()) {
-        returnValue = beanManager.resolve(beans);
-      }
-    }
-    return returnValue;
   }
 
 }
