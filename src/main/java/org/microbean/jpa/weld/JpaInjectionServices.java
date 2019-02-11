@@ -162,12 +162,8 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
    * <p>{@link EntityManager}s created by this class will have their
    * {@link EntityManager#joinTransaction()} methods called if the
    * supplied object is non-{@code null}.</p>
-   *
-   * @param transaction an {@link Object} representing the
-   * transaction; may be {@code null} in which case no action will be
-   * taken
    */
-  final void jtaTransactionBegun(final Object transaction) {
+  final void jtaTransactionBegun() {
     assert this == INSTANCE;
     this.ems.forEach(em -> em.joinTransaction());
   }

@@ -17,17 +17,18 @@
 package org.microbean.jpa.weld;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Initialized;
 
 import javax.enterprise.event.Observes;
 
-import javax.transaction.Synchronization;
-import javax.transaction.Transaction;
+import javax.transaction.TransactionScoped;
 
 /**
  * A bean housing an observer method that alerts a {@link
  * JpaInjectionServices} instance when a JTA transaction is available.
  *
- * @author <a href="https://about.me/lairdnelson" target="_parent">Laird Nelson</a>
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
  *
  * @see JpaInjectionServices
  */
@@ -37,11 +38,11 @@ final class TransactionObserver {
   private TransactionObserver() {
     super();
   }
-  
-  private static final void jtaTransactionBegun(@Observes final Transaction transaction,
+
+  private static final void jtaTransactionBegun(@Observes @Initialized(TransactionScoped.class) final Object event,
                                                 final JpaInjectionServices services) {
-    if (transaction != null && services != null) {
-      services.jtaTransactionBegun(transaction);
+    if (services != null) {
+      services.jtaTransactionBegun();
     }
   }
   
