@@ -35,6 +35,12 @@ import javax.inject.Singleton;
  */
 final class JpaInjectionServicesExtension implements Extension {
 
+
+  /*
+   * Constructors.
+   */
+
+  
   /**
    * Creates a new {@link JpaInjectionServicesExtension}.
    *
@@ -45,6 +51,12 @@ final class JpaInjectionServicesExtension implements Extension {
   private JpaInjectionServicesExtension() {
     super();
   }
+
+
+  /*
+   * Instance methods.
+   */
+  
 
   /**
    * Creates a bean deliberately in {@link Singleton} scope to

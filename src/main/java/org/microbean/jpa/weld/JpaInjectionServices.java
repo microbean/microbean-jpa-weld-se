@@ -20,10 +20,8 @@ import java.lang.annotation.Annotation;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
@@ -53,7 +51,6 @@ import javax.persistence.SynchronizationType;
 
 import javax.persistence.spi.PersistenceProvider;
 import javax.persistence.spi.PersistenceUnitInfo;
-import javax.persistence.spi.PersistenceUnitTransactionType;
 
 import org.jboss.weld.manager.api.ExecutorServices;
 import org.jboss.weld.manager.api.WeldManager;
@@ -175,8 +172,8 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
    *
    * <p>This method never returns {@code null}.</p>
    *
-   * @param the {@link InjectionPoint} annotated with {@link
-   * PersistenceContext}; must not be {@code null}
+   * @param injectionPoint the {@link InjectionPoint} annotated with
+   * {@link PersistenceContext}; must not be {@code null}
    *
    * @return a non-{@code null} {@link ResourceReferenceFactory} whose
    * {@link ResourceReferenceFactory#createResource()} method will
@@ -228,8 +225,8 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
    *
    * <p>This method never returns {@code null}.</p>
    *
-   * @param the {@link InjectionPoint} annotated with {@link
-   * PersistenceUnit}; must not be {@code null}
+   * @param injectionPoint the {@link InjectionPoint} annotated with
+   * {@link PersistenceUnit}; must not be {@code null}
    *
    * @return a non-{@code null} {@link ResourceReferenceFactory} whose
    * {@link ResourceReferenceFactory#createResource()} method will
@@ -339,6 +336,10 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
    * @return a non-{@code null} {@link EntityManager}
    *
    * @see #registerPersistenceContextInjectionPoint(InjectionPoint)
+   *
+   * @deprecated See the documentation for the {@link
+   * org.jboss.weld.injection.spi.JpaInjectionServices#resolvePersistenceContext(InjectionPoint)}
+   * method.
    */
   @Deprecated
   @Override
@@ -360,6 +361,10 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
    * @return a non-{@code null} {@link EntityManagerFactory}
    *
    * @see #registerPersistenceUnitInjectionPoint(InjectionPoint)
+   *
+   * @deprecated See the documentation for the {@link
+   * org.jboss.weld.injection.spi.JpaInjectionServices#resolvePersistenceUnit(InjectionPoint)}
+   * method.
    */
   @Deprecated
   @Override
@@ -422,7 +427,7 @@ public final class JpaInjectionServices implements org.jboss.weld.injection.spi.
                                try {
                                  validatorFactoryClass = Class.forName("javax.validation.ValidatorFactory");
                                } catch (final ClassNotFoundException classNotFoundException) {
-                                 classNotFoundException.printStackTrace();
+
                                }
                                if (validatorFactoryClass != null) {
                                  final Bean<?> validatorFactoryBean =
